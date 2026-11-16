@@ -127,3 +127,4 @@ dialog h3 { margin: 0 0 4px; }
 @keyframes dBlurA { 0%, 40% { filter: blur(0); } 60%, 100% { filter: blur(8px); } }
 @keyframes dBlurB { 0%, 40% { opacity: 0; filter: blur(8px); } 60%, 100% { opacity: 1; filter: blur(0); } }
 @media (prefers-reduced-motion: reduce) { .demo *, .demo::after { animation-duration: 6s !important; } }
+.credit { text-align: center; color: var(--sub); padding: 8px 16px 32px; } .credit b { color: var(--accent); }
