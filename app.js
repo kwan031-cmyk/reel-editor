@@ -1,5 +1,4 @@
 import { FFmpeg } from './vendor/ffmpeg/index.js';
-import { toBlobURL } from './vendor/util/index.js';
 import { buildArgs, TRANS_SEC } from './build.js';
 import { STEP, envelope, findSpikes, motion, scores, pickHighlights, candidates, segLenFor } from './analyze.js';
 
@@ -28,8 +27,19 @@ function engine(say = () => {}) {
     const ff = new FFmpeg();
     ff.on('log', ({ message }) => { logs.push(message); if (logs.length > 300) logs.shift(); onLog?.(message); });
     const base = new URL('vendor/core/', location.href).href;
-    const wasmURL = await toBlobURL(base + 'ffmpeg-core.wasm', 'application/wasm', true, ({ received }) =>
-      say(`편집 엔진 내려받는 중… ${(received / 1048576).toFixed(0)} / 31 MB (처음 한 번만)`));
+    // own download with progress: ffmpeg's toBlobURL breaks when the host gzips the file
+    // (Content-Length is the compressed size, so it reports an "incomplete" download) — e.g. GitHub Pages
+    const res = await fetch(base + 'ffmpeg-core.wasm');
+    if (!res.ok) throw new Error(`engine download failed: ${res.status}`);
+    const reader = res.body.getReader(), chunks = [];
+    for (let got = 0; ;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      got += value.length;
+      say(`편집 엔진 내려받는 중… ${(got / 1048576).toFixed(0)} / 31 MB (처음 한 번만)`);
+    }
+    const wasmURL = URL.createObjectURL(new Blob(chunks, { type: 'application/wasm' }));
     say('편집 엔진 켜는 중…');
     await ff.load({ coreURL: base + 'ffmpeg-core.js', wasmURL });
     return ff;
