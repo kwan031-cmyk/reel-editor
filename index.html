@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#111214">
+<title>쉬운 릴스 편집기</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>쉬운 릴스 편집기</h1>
+  <p>영상을 담고 → 자르고 → 글자 넣고 → 만들기. 영상은 이 기기 밖으로 나가지 않아요.</p>
+</header>
+
+<main>
+  <section>
+    <h2><span class="n">1</span> 영상 담기</h2>
+    <label class="big primary">
+      ＋ 영상 고르기 (여러 개 가능)
+      <input id="pick" type="file" accept="video/*,.mov,.mp4,.m4v,.webm" multiple hidden>
+    </label>
+  </section>
+
+  <section>
+    <h2><span class="n">2</span> 자르고 글자 넣기</h2>
+    <div class="hl">
+      <b>✨ 하이라이트 자동 추리기</b>
+      <p class="hint">영상을 살펴보고 움직임이 많고 소리가 큰 장면을 영상마다 여러 개 찾아 줘요. 장면을 눌러 미리 보고, 쓸 장면만 골라서 샘플을 만드세요.</p>
+      <div class="seg" data-k="hlLen">
+        <button data-v="15" class="on">15초</button>
+        <button data-v="30">30초</button>
+        <button data-v="60">60초</button>
+      </div>
+      <button class="big primary" id="hlBtn">✨ 하이라이트 장면 찾기</button>
+      <p id="hlMsg" class="hint" hidden></p>
+      <div id="cands" class="cands" hidden></div>
+      <p id="candInfo" class="total" hidden></p>
+      <button class="big primary" id="hlMake" hidden>🎬 고른 장면으로 샘플 만들기</button>
+      <button class="link" id="hlUndo" hidden>↩ 되돌리기 (추리기 전 영상으로)</button>
+    </div>
+    <p class="hint" id="empty">위에서 영상을 고르면 여기에 나와요.</p>
+    <p class="hint" id="stripHint" hidden>순서: 영상을 <b>끌어서</b> 옮기면 순서가 바뀌어요. 누르면 아래에서 그 영상을 편집해요.</p>
+    <div id="strip" class="strip" hidden></div>
+    <div id="list"></div>
+    <p class="total" id="total"></p>
+  </section>
+
+  <section>
+    <h2><span class="n">3</span> 꾸미기</h2>
+    <div class="opt">
+      <span>화면 맞추기 (9:16)</span>
+      <div class="seg" data-k="fit">
+        <button data-v="cover" class="on">꽉 채우기</button>
+        <button data-v="contain">전체 보이기</button>
+      </div>
+    </div>
+    <div class="opt">
+      <span>글자 위치</span>
+      <div class="seg" data-k="pos">
+        <button data-v="top">위</button>
+        <button data-v="mid">가운데</button>
+        <button data-v="bot" class="on">아래</button>
+      </div>
+    </div>
+    <div class="opt">
+      <span>글자 크기</span>
+      <div class="seg" data-k="size">
+        <button data-v="s">작게</button>
+        <button data-v="m" class="on">보통</button>
+        <button data-v="l">크게</button>
+      </div>
+    </div>
+    <div class="opt">
+      <span>글꼴</span>
+      <div class="seg" data-k="font">
+        <button data-v="BHS" class="on" style="font-family:BHS">굵게</button>
+        <button data-v="DOH" style="font-family:DOH">깔끔</button>
+        <button data-v="JUA" style="font-family:JUA">귀엽게</button>
+        <button data-v="PEN" style="font-family:PEN">손글씨</button>
+      </div>
+    </div>
+    <div class="opt">
+      <span>배경 음악</span>
+      <label class="big">
+        🎵 <span id="musicName">음악 고르기 (선택)</span>
+        <input id="musicPick" type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden>
+      </label>
+      <label class="vol">음악 크기 <input type="range" id="musicVol" min="0" max="150" step="5" value="70"> <b id="musicVolV">70%</b></label>
+      <button class="link" id="musicDel" hidden>음악 빼기</button>
+    </div>
+    <div class="opt">
+      <span>영상 원래 소리</span>
+      <div class="seg" data-k="keepOrig">
+        <button data-v="1" class="on">켜기</button>
+        <button data-v="0">끄기</button>
+      </div>
+    </div>
+    <div class="opt">
+      <span>화질</span>
+      <div class="seg" data-k="q">
+        <button data-v="1080" class="on">고화질 1080p</button>
+        <button data-v="720">빠르게 720p</button>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">4</span> mp4로 만들기</h2>
+    <button class="big primary" id="make">🎬 영상 만들기</button>
+    <div id="prog" hidden>
+      <div class="bar"><i id="barFill"></i></div>
+      <p id="progMsg"></p>
+    </div>
+    <div id="result" hidden>
+      <video id="outVideo" controls playsinline></video>
+      <a class="big primary" id="save" download>💾 저장하기</a>
+      <button class="big" id="share" hidden>📤 공유 / 사진첩에 저장</button>
+      <p class="hint">저장한 영상을 인스타 릴스·유튜브 쇼츠에 올리면 돼요. 고치고 싶으면 위에서 바꾸고 다시 만들기를 누르세요.</p>
+    </div>
+  </section>
+</main>
+
+<template id="clipTpl">
+  <div class="clip">
+    <div class="frame"><video playsinline preload="metadata" controls muted></video><img class="txt" alt="" hidden></div>
+    <div class="ctrl">
+      <div class="head"><b class="no"></b><span class="len"></span></div>
+      <p class="warn" hidden>이 영상은 미리보기가 안 되지만 만들기는 돼요.</p>
+      <label>시작 <input type="number" class="sn" min="0" step="0.1" inputmode="decimal" aria-label="시작 초"> 초<input type="range" class="s" min="0" step="0.1"></label>
+      <label>끝 <input type="number" class="en" min="0" step="0.1" inputmode="decimal" aria-label="끝 초"> 초<input type="range" class="e" min="0" step="0.1"></label>
+      <div class="btns">
+        <button data-a="setS">⏵ 지금 위치부터</button>
+        <button data-a="setE">⏹ 지금 위치까지</button>
+      </div>
+      <textarea class="t" rows="2" placeholder="이 장면에 넣을 글자 (없어도 돼요)"></textarea>
+      <div class="snd">
+        <button data-a="spike">🔊 튀는 소리 찾기</button>
+        <canvas class="wave" hidden></canvas>
+        <p class="spk" hidden></p>
+        <label class="fix" hidden><input type="checkbox" checked> 튀는 부분 소리 줄이기</label>
+      </div>
+      <label class="tr">다음 영상으로 넘어갈 때
+        <select class="trans">
+          <option value="cut">바로 넘기기 (컷)</option>
+          <option value="fade">부드럽게 겹치기</option>
+          <option value="fadeblack">렌즈 가리기 (검은 화면)</option>
+          <option value="fadewhite">하얀 번쩍</option>
+          <option value="zoomin">빨려 들어가기 (줌)</option>
+          <option value="slideleft">옆으로 휙 밀기</option>
+          <option value="hblur">흐려지며 넘기기</option>
+        </select>
+      </label>
+      <div class="btns">
+        <button data-a="up" aria-label="앞으로">◀ 앞으로</button>
+        <button data-a="down" aria-label="뒤로">뒤로 ▶</button>
+        <button data-a="del" class="del">삭제</button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<template id="tileTpl">
+  <div class="tile" role="button" tabindex="0"><video muted playsinline preload="metadata"></video><b></b><span class="d"></span></div>
+</template>
+
+<template id="candTpl">
+  <div class="cand"><video muted playsinline preload="metadata"></video><span class="cmeta"></span><button class="pick"></button></div>
+</template>
+
+<script type="module" src="app.js"></script>
+<script>
+  if ('serviceWorker' in navigator && isSecureContext) navigator.serviceWorker.register('sw.js');
+</script>
+</body>
+</html>
