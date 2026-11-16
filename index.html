@@ -43,8 +43,13 @@
       <button class="link" id="hlUndo" hidden>↩ 되돌리기 (추리기 전 영상으로)</button>
     </div>
     <p class="hint" id="empty">위에서 영상을 고르면 여기에 나와요.</p>
-    <p class="hint" id="stripHint" hidden>순서: 영상을 <b>끌어서</b> 옮기면 순서가 바뀌어요. 누르면 아래에서 그 영상을 편집해요.</p>
+    <p class="hint" id="stripHint" hidden>순서: 영상을 <b>끌어서</b> 옮기면 순서가 바뀌어요. 누르면 아래에서 그 영상을 편집해요. 영상 사이 동그란 버튼은 <b>트랜지션</b>(넘어가는 효과)이에요. 눌러서 바꾸세요.</p>
     <div id="strip" class="strip" hidden></div>
+    <div id="seq" class="seq" hidden>
+      <div class="stage" id="seqStage"><video playsinline preload="auto"></video><video playsinline preload="auto"></video><div class="veil"></div><img class="txt" alt="" hidden></div>
+      <button class="big" id="seqPlay">▶ 처음부터 이어서 보기 (트랜지션 포함)</button>
+      <p class="hint">만들기 전에 바로 보는 미리보기예요. 트랜지션은 실제 영상과 거의 같게 보여요.</p>
+    </div>
     <div id="list"></div>
     <p class="total" id="total"></p>
   </section>
@@ -143,16 +148,8 @@
         <p class="spk" hidden></p>
         <label class="fix" hidden><input type="checkbox" checked> 튀는 부분 소리 줄이기</label>
       </div>
-      <label class="tr">다음 영상으로 넘어갈 때
-        <select class="trans">
-          <option value="cut">바로 넘기기 (컷)</option>
-          <option value="fade">부드럽게 겹치기</option>
-          <option value="fadeblack">렌즈 가리기 (검은 화면)</option>
-          <option value="fadewhite">하얀 번쩍</option>
-          <option value="zoomin">빨려 들어가기 (줌)</option>
-          <option value="slideleft">옆으로 휙 밀기</option>
-          <option value="hblur">흐려지며 넘기기</option>
-        </select>
+      <label class="tr">트랜지션 (다음 영상으로 넘어가는 효과)
+        <select class="trans"></select>
       </label>
       <div class="btns">
         <button data-a="up" aria-label="앞으로">◀ 앞으로</button>
@@ -170,6 +167,14 @@
 <template id="candTpl">
   <div class="cand"><video muted playsinline preload="metadata"></video><span class="cmeta"></span><button class="pick"></button></div>
 </template>
+
+<dialog id="trDlg">
+  <h3 id="trTitle"></h3>
+  <p class="hint">움직이는 그림처럼 A 영상에서 B 영상으로 넘어가요. 눌러서 고르세요.</p>
+  <div id="trGrid" class="trgrid"></div>
+  <label class="fix"><input type="checkbox" id="trAll"> 모든 연결에 똑같이 넣기</label>
+  <button class="big" id="trClose">닫기</button>
+</dialog>
 
 <script type="module" src="app.js"></script>
 <script>

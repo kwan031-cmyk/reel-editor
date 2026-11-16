@@ -7,6 +7,16 @@ const $ = (s) => document.querySelector(s);
 let clips = []; // { file, url, dur, start, end, text, trans, fix, ana, el }
 const opt = { fit: 'cover', pos: 'bot', size: 'm', font: 'BHS', keepOrig: '1', q: '1080', music: null, vol: 70, hlLen: '15' };
 const MIN = 0.3; // shortest clip in seconds
+// transitions: key = ffmpeg xfade name ('cut' = none)
+const TRANS = {
+  cut: { icon: '✂', name: '바로 넘기기 (컷)' },
+  fade: { icon: '◐', name: '부드럽게 겹치기' },
+  fadeblack: { icon: '●', name: '렌즈 가리기 (검은 화면)' },
+  fadewhite: { icon: '✦', name: '하얀 번쩍' },
+  zoomin: { icon: '◎', name: '빨려 들어가기 (줌)' },
+  slideleft: { icon: '⇠', name: '옆으로 휙 밀기' },
+  hblur: { icon: '≋', name: '흐려지며 넘기기' },
+};
 let seq = 0, outUrl = null, busy = false, backup = null;
 
 /* ---------- engine (ffmpeg.wasm, runs inside the browser) ---------- */
@@ -50,6 +60,7 @@ async function withMount(files, fn) {
 
 function lock(on) {
   busy = on;
+  if (on) stopSeq();
   document.querySelectorAll('button, input, textarea, select').forEach((x) => (x.disabled = on));
 }
 
@@ -81,11 +92,24 @@ function newClip(file, extra = {}) {
   const c = { file, url: URL.createObjectURL(file), dur: 0, start: 0, end: 0, text: '', trans: 'cut', fix: true, ana: null, ...extra };
   c.tile = $('#tileTpl').content.firstElementChild.cloneNode(true);
   c.tile.querySelector('video').src = c.url;
+  c.chip = Object.assign(document.createElement('button'), { type: 'button', className: 'chip' });
   c.el = makeCard(c);
   return c;
 }
 function dropClips(list, revoke) {
-  list.forEach((c) => { c.el.remove(); c.tile.remove(); if (revoke) URL.revokeObjectURL(c.url); });
+  list.forEach((c) => { c.el.remove(); c.tile.remove(); c.chip.remove(); if (revoke) URL.revokeObjectURL(c.url); });
+}
+function setTrans(c, t) {
+  c.trans = t;
+  c.el.querySelector('.trans').value = t;
+  paintChip(c);
+  renderTotal();
+}
+function paintChip(c) {
+  const t = TRANS[c.trans];
+  c.chip.textContent = t.icon;
+  c.chip.classList.toggle('cut', c.trans === 'cut');
+  c.chip.title = c.chip.ariaLabel = `트랜지션: ${t.name} (눌러서 바꾸기)`;
 }
 function addFiles(files) {
   let first = null;
@@ -114,6 +138,7 @@ function makeCard(c) {
     setRange(c, c.start, c.end);
   };
   if (c.dur) init(c.dur);
+  q('.trans').innerHTML = Object.entries(TRANS).map(([k, t]) => `<option value="${k}">${t.icon} ${t.name}</option>`).join('');
   q('.trans').value = c.trans;
   v.addEventListener('loadedmetadata', () => { if (isFinite(v.duration) && v.duration > 0) init(v.duration); });
   v.addEventListener('error', async () => {
@@ -134,7 +159,7 @@ function makeCard(c) {
   q('.sn').addEventListener('change', (e) => { setRange(c, +e.target.value || 0, c.end, 's'); v.currentTime = c.start; });
   q('.en').addEventListener('change', (e) => { setRange(c, c.start, +e.target.value || 0, 'e'); v.currentTime = c.end; });
   q('.t').addEventListener('input', (ev) => { c.text = ev.target.value; drawPreview(c); });
-  q('.trans').addEventListener('change', (ev) => { c.trans = ev.target.value; renderTotal(); });
+  q('.trans').addEventListener('change', (ev) => setTrans(c, ev.target.value));
   q('.fix input').addEventListener('change', (ev) => { c.fix = ev.target.checked; });
   el.addEventListener('click', async (ev) => {
     const b = ev.target.closest('button');
@@ -221,12 +246,41 @@ function renderList() {
     c.tile.querySelector('b').textContent = i + 1;
     c.tile.classList.toggle('on', c === sel);
     c.tile.setAttribute('aria-label', `${i + 1}번 영상`);
-    if (strip.children[i] !== c.tile) strip.insertBefore(c.tile, strip.children[i] || null);
+    c.chip.hidden = i === clips.length - 1;
+    paintChip(c);
+  });
+  // strip order: tile, chip, tile, chip … (only moves nodes that are out of place)
+  clips.flatMap((c) => [c.tile, c.chip]).forEach((node, k) => {
+    if (strip.children[k] !== node) strip.insertBefore(node, strip.children[k] || null);
   });
   $('#empty').hidden = clips.length > 0;
-  strip.hidden = $('#stripHint').hidden = !clips.length;
+  strip.hidden = $('#stripHint').hidden = $('#seq').hidden = !clips.length;
   renderTotal();
 }
+
+/* ---------- transition picker: opened from the chip between two tiles ---------- */
+let trFor = null;
+$('#trGrid').innerHTML = Object.entries(TRANS).map(([k, t]) =>
+  `<button data-t="${k}"><span class="demo" data-t="${k}"><i class="a">A</i><i class="b">B</i></span>${t.icon} ${t.name}</button>`).join('');
+function openTr(c) {
+  trFor = c;
+  const i = clips.indexOf(c);
+  $('#trTitle').textContent = `${i + 1}번 → ${i + 2}번 영상 트랜지션`;
+  $('#trGrid').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.t === c.trans));
+  $('#trAll').checked = false;
+  $('#trDlg').showModal();
+}
+$('#trGrid').addEventListener('click', (e) => {
+  const b = e.target.closest('button');
+  if (!b || !trFor) return;
+  ($('#trAll').checked ? clips.slice(0, -1) : [trFor]).forEach((c) => setTrans(c, b.dataset.t));
+  $('#trDlg').close();
+});
+$('#trClose').addEventListener('click', () => $('#trDlg').close());
+$('#strip').addEventListener('click', (e) => {
+  const c = clips.find((x) => x.chip === e.target);
+  if (c && !busy) openTr(c);
+});
 function moveClip(c, to) {
   const i = clips.indexOf(c);
   if (to < 0 || to >= clips.length || to === i) return;
@@ -424,6 +478,87 @@ $('#hlUndo').addEventListener('click', () => {
   renderList();
   $('#hlUndo').hidden = true;
   hlSay('추리기 전 영상으로 돌아왔어요.');
+});
+
+/* ---------- play all arranged clips in a row, with transitions acted out in CSS (no encoding) ---------- */
+let seqRun = null, musicUrl = null, musicOf = null;
+// plain timer, not requestAnimationFrame: rAF stops while the page is hidden and the player would hang
+const until = (run, fn) => new Promise((res) => { const tick = () => (run.stop || fn() ? res() : setTimeout(tick, 25)); tick(); });
+const playSafe = (v) => v.play().catch(() => { v.muted = true; return v.play().catch(() => {}); }); // autoplay rules may block sound
+
+function prep(v, c) {
+  v.getAnimations().forEach((a) => a.cancel());
+  v.style.cssText = 'opacity:0';
+  v.muted = opt.keepOrig !== '1';
+  if (v.dataset.src !== c.url) { v.src = c.url; v.dataset.src = c.url; }
+  return new Promise((res) => {
+    const go = () => { v.addEventListener('seeked', res, { once: true }); v.currentTime = c.start; };
+    v.readyState >= 1 ? go() : v.addEventListener('loadedmetadata', go, { once: true });
+  });
+}
+function act(t, a, b, veil, ms) {
+  const o = { duration: ms, easing: 'ease-in-out' };
+  a.style.zIndex = 1; b.style.zIndex = 2; b.style.opacity = 1;
+  let anims = [];
+  if (t === 'fade') anims = [b.animate([{ opacity: 0 }, { opacity: 1 }], o)];
+  if (t === 'fadeblack' || t === 'fadewhite') {
+    veil.style.background = t === 'fadeblack' ? '#000' : '#fff';
+    anims = [veil.animate([{ opacity: 0 }, { opacity: 1 }, { opacity: 0 }], o),
+      b.animate([{ opacity: 0 }, { opacity: 0, offset: 0.5 }, { opacity: 1, offset: 0.5 }, { opacity: 1 }], o)];
+  }
+  if (t === 'zoomin') { a.style.zIndex = 3; anims = [a.animate([{ transform: 'scale(1)', opacity: 1 }, { transform: 'scale(2.5)', opacity: 0 }], o)]; }
+  if (t === 'slideleft') anims = [a.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-100%)' }], o),
+    b.animate([{ transform: 'translateX(100%)' }, { transform: 'translateX(0)' }], o)];
+  if (t === 'hblur') anims = [a.animate([{ filter: 'blur(0)' }, { filter: 'blur(14px)' }], o),
+    b.animate([{ opacity: 0, filter: 'blur(14px)' }, { opacity: 1, filter: 'blur(0)' }], o)];
+  // timer fallback: animations may not report "finished" while the page is hidden
+  return Promise.race([Promise.all(anims.map((x) => x.finished.catch(() => {}))), new Promise((r) => setTimeout(r, ms + 150))])
+    .then(() => { anims.forEach((x) => x.cancel()); a.style.opacity = 0; a.style.zIndex = 1; });
+}
+function stopSeq() {
+  if (!seqRun) return;
+  seqRun.stop = true;
+  seqRun = null;
+  $('#seqStage').querySelectorAll('video').forEach((v) => v.pause());
+  $('#seqStage').querySelector('audio')?.pause();
+  $('#seqPlay').textContent = '▶ 처음부터 이어서 보기 (트랜지션 포함)';
+}
+$('#seqPlay').addEventListener('click', async () => {
+  if (seqRun) return stopSeq();
+  const list = clips.filter((c) => c.dur > 0);
+  if (!list.length) return;
+  const run = (seqRun = { stop: false });
+  $('#seqPlay').textContent = '■ 멈추기';
+  const stage = $('#seqStage'), veil = stage.querySelector('.veil'), txt = stage.querySelector('.txt');
+  let [cur, nxt] = stage.querySelectorAll('video');
+  let au = stage.querySelector('audio');
+  if (opt.music) {
+    if (musicOf !== opt.music) { if (musicUrl) URL.revokeObjectURL(musicUrl); musicUrl = URL.createObjectURL(opt.music); musicOf = opt.music; }
+    if (!au) au = stage.appendChild(document.createElement('audio'));
+    au.src = musicUrl; au.volume = Math.min(1, opt.vol / 100); au.currentTime = 0;
+  }
+  const showText = (c) => { const p = c.el.querySelector('.txt'); txt.hidden = p.hidden; if (!p.hidden) txt.src = p.src; };
+  await prep(cur, list[0]);
+  if (run.stop) return;
+  cur.style.opacity = 1;
+  playSafe(cur);
+  if (opt.music) playSafe(au);
+  for (let i = 0; i < list.length && !run.stop; i++) {
+    const c = list[i], n = list[i + 1];
+    showText(c);
+    const ready = n ? prep(nxt, n) : null; // load the next clip while this one plays
+    const d = n && c.trans !== 'cut' ? Math.min(TRANS_SEC, (c.end - c.start) / 2, (n.end - n.start) / 2) : 0;
+    await until(run, () => cur.currentTime >= c.end - d || cur.ended);
+    if (run.stop || !n) break;
+    await ready;
+    if (run.stop) break;
+    playSafe(nxt);
+    if (d) setTimeout(() => showText(n), (d * 1000) / 2);
+    await act(c.trans, cur, nxt, veil, d * 1000);
+    cur.pause();
+    [cur, nxt] = [nxt, cur];
+  }
+  if (seqRun === run) stopSeq();
 });
 
 /* ---------- step 4: make the mp4 ---------- */

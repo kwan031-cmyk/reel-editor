@@ -83,3 +83,47 @@ textarea { width: 100%; font: inherit; font-size: 18px; color: var(--text); back
 .cand .pick { margin: 6px; min-height: 44px; }
 .cand.on .pick { background: var(--accent); color: #fff; }
 .clip { border-top: 0; padding-top: 0; } /* one card at a time now */
+/* strip: tile, transition chip, tile, ... */
+.strip { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.tile { width: 70px; flex: none; }
+.chip { width: 34px; height: 34px; flex: none; border-radius: 50%; padding: 0; font-size: 17px; background: var(--accent); color: #fff; }
+.chip.cut { background: #2a2d33; color: var(--sub); }
+/* sequence preview player */
+.seq { margin: 4px 0 18px; }
+.stage { position: relative; width: 100%; max-width: 240px; aspect-ratio: 9/16; margin: 0 auto; overflow: hidden; background: #000; border-radius: 12px; }
+.stage video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; }
+body.contain .stage video { object-fit: contain; }
+.stage .veil { position: absolute; inset: 0; opacity: 0; z-index: 4; pointer-events: none; }
+.stage .txt { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; }
+/* transition picker with looping A->B demos */
+dialog { background: var(--card); color: var(--text); border: 0; border-radius: 18px; padding: 18px; width: min(560px, calc(100vw - 32px)); }
+dialog::backdrop { background: rgba(0,0,0,.6); }
+dialog h3 { margin: 0 0 4px; }
+.trgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; margin: 10px 0; }
+.trgrid button { padding: 10px 6px; font-size: 15px; border: 3px solid transparent; }
+.trgrid button.on { border-color: var(--accent); }
+.demo { position: relative; width: 54px; height: 96px; overflow: hidden; border-radius: 6px; background: #000; display: block; margin: 0 auto 6px; }
+.demo i { position: absolute; inset: 0; display: grid; place-items: center; font-style: normal; font-weight: 700; font-size: 22px; color: #fff; }
+.demo .a { background: #3a6df0; }
+.demo .b { background: var(--accent); opacity: 0; }
+.demo::after { content: ''; position: absolute; inset: 0; opacity: 0; }
+.demo[data-t="cut"] .b { animation: dCut 2.4s infinite; }
+.demo[data-t="fade"] .b { animation: dFade 2.4s infinite; }
+.demo[data-t="fadeblack"] .b, .demo[data-t="fadewhite"] .b { animation: dCut 2.4s infinite; }
+.demo[data-t="fadeblack"]::after { background: #000; animation: dVeil 2.4s infinite; }
+.demo[data-t="fadewhite"]::after { background: #fff; animation: dVeil 2.4s infinite; }
+.demo[data-t="zoomin"] .b { opacity: 1; }
+.demo[data-t="zoomin"] .a { z-index: 1; animation: dZoom 2.4s infinite; }
+.demo[data-t="slideleft"] .b { opacity: 1; animation: dSlideB 2.4s infinite; }
+.demo[data-t="slideleft"] .a { animation: dSlideA 2.4s infinite; }
+.demo[data-t="hblur"] .a { animation: dBlurA 2.4s infinite; }
+.demo[data-t="hblur"] .b { animation: dBlurB 2.4s infinite; }
+@keyframes dCut { 0%, 49.9% { opacity: 0; } 50%, 100% { opacity: 1; } }
+@keyframes dFade { 0%, 40% { opacity: 0; } 60%, 100% { opacity: 1; } }
+@keyframes dVeil { 0%, 40% { opacity: 0; } 50% { opacity: 1; } 60%, 100% { opacity: 0; } }
+@keyframes dZoom { 0%, 40% { transform: scale(1); opacity: 1; } 60%, 100% { transform: scale(3); opacity: 0; } }
+@keyframes dSlideA { 0%, 40% { transform: translateX(0); } 60%, 100% { transform: translateX(-100%); } }
+@keyframes dSlideB { 0%, 40% { transform: translateX(100%); } 60%, 100% { transform: translateX(0); } }
+@keyframes dBlurA { 0%, 40% { filter: blur(0); } 60%, 100% { filter: blur(8px); } }
+@keyframes dBlurB { 0%, 40% { opacity: 0; filter: blur(8px); } 60%, 100% { opacity: 1; filter: blur(0); } }
+@media (prefers-reduced-motion: reduce) { .demo *, .demo::after { animation-duration: 6s !important; } }
