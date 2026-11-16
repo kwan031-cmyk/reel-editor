@@ -487,7 +487,7 @@ $('#hlUndo').addEventListener('click', () => {
   clips = backup; backup = null; sel = clips[0];
   renderList();
   $('#hlUndo').hidden = true;
-  hlSay('추리기 전 영상으로 돌아왔어요.');
+  hlSay('찾기 전 영상으로 돌아왔어요.');
 });
 
 /* ---------- play all arranged clips in a row, with transitions acted out in CSS (no encoding) ---------- */

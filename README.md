@@ -10,4 +10,4 @@
 
 ## 사용한 오픈소스
 - [ffmpeg.wasm](https://github.com/ffmpegwasm/ffmpeg.wasm) (`vendor/`) — MIT, 안에 든 FFmpeg 코어는 GPL/LGPL (소스: 위 링크)
-- 글꼴: Black Han Sans, Do Hyeon, Jua, Nanum Pen Script — SIL Open Font License 1.1 (Google Fonts)
+- 글꼴: Black Han Sans, Do Hyeon, Jua, Nanum Pen Script, Gothic A1 (제목 글자만) — SIL Open Font License 1.1 (Google Fonts)
