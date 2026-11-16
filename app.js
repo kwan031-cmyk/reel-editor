@@ -635,6 +635,7 @@ async function make(sample) {
 }
 
 function showResult(blob, secs, sample) {
+  if (!sample) counter('videos', true).then((v) => showCount('#cMade', v)); // samples don't count
   if (outUrl) URL.revokeObjectURL(outUrl);
   outUrl = URL.createObjectURL(blob);
   const d = new Date(), p = (n) => String(n).padStart(2, '0');
@@ -651,3 +652,24 @@ function showResult(blob, secs, sample) {
   $('#result').hidden = false;
   $('#result').scrollIntoView({ behavior: 'smooth' });
 }
+
+/* ---------- visitor / video counters ----------
+   GitHub Pages can't store numbers, so a free no-signup counter service (Abacus) keeps them.
+   shortcut: if that service shuts down the counters just show "-"; move to own storage if that happens. */
+const COUNT_API = 'https://abacus.jasoncameron.dev', COUNT_NS = 'sf-ttukdik';
+const counting = location.hostname.endsWith('github.io'); // local tests don't add fake numbers
+async function counter(key, hit) {
+  try {
+    const r = await fetch(`${COUNT_API}/${hit && counting ? 'hit' : 'get'}/${COUNT_NS}/${key}`);
+    if (r.status === 404) return 0; // never counted yet
+    return r.ok ? (await r.json()).value : null;
+  } catch { return null; }
+}
+const showCount = (id, v) => { if (v != null) $(id).textContent = v.toLocaleString('ko-KR'); };
+(async () => {
+  const today = new Date().toISOString().slice(0, 10);
+  let seen = null;
+  try { seen = localStorage.getItem('visitDay'); localStorage.setItem('visitDay', today); } catch {} // once per browser per day
+  showCount('#cVisit', await counter('visits', seen !== today));
+  showCount('#cMade', await counter('videos', false));
+})();
