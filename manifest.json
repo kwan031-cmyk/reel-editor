@@ -1,6 +1,6 @@
 {
-  "name": "쉬운 릴스 편집기",
-  "short_name": "릴스편집",
+  "name": "숏폼 뚝딱",
+  "short_name": "숏폼 뚝딱",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
