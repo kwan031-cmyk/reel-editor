@@ -130,3 +130,4 @@ dialog h3 { margin: 0 0 4px; }
 @media (prefers-reduced-motion: reduce) { .demo *, .demo::after { animation-duration: 6s !important; } }
 .credit { text-align: center; color: var(--sub); padding: 8px 16px 32px; } .credit b { color: var(--accent); }
 .credit .stats { display: inline-block; margin-top: 6px; } .credit .stats b { color: var(--text); }
+.hlfiles { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; } .hlfiles .big { margin-top: 0; font-size: 16px; min-height: 56px; }

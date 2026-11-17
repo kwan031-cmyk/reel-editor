@@ -464,9 +464,56 @@ function renderCands(list, chosen) {
     box.append(el);
     return cand;
   });
-  box.hidden = $('#hlMake').hidden = false;
+  box.hidden = $('#hlMake').hidden = $('#hlSave').hidden = false;
   candInfo();
 }
+
+// each chosen scene as its own 9:16 mp4 (screen fit + quality from step 3, original sound, no text)
+let hlUrls = [];
+$('#hlSave').addEventListener('click', async () => {
+  const on = cands.filter((k) => k.on).sort((a, b) => a.i - b.i || a.start - b.start);
+  if (!on.length) { alert('저장할 장면을 하나 이상 골라 주세요.'); return; }
+  if (busy) return;
+  lock(true);
+  const [W, H] = opt.q === '720' ? [720, 1280] : [1080, 1920];
+  const box = $('#hlFiles');
+  hlUrls.forEach((u) => URL.revokeObjectURL(u));
+  hlUrls = [];
+  box.innerHTML = '';
+  box.hidden = false;
+  const files = [];
+  try {
+    await engine(hlSay);
+    for (const [n, k] of on.entries()) {
+      const o = hlSrc[k.i], name = 'p' + ext(o.file.name);
+      hlSay(`장면 클립 만드는 중… ${n + 1}/${on.length}`);
+      const data = await withMount([new File([o.file], name)], async (ff, dir) => {
+        const { args } = buildArgs({ clips: [{ path: `${dir}/${name}`, start: k.start, dur: k.end - k.start, hasAudio: o.ana.hasAudio }],
+          music: null, keepOrig: true, fit: opt.fit, W, H, out: 'clip.mp4' });
+        const from = logs.length;
+        if (await ff.exec(args) !== 0) throw new Error(logs.slice(from).slice(-6).join('\n'));
+        const out = await ff.readFile('clip.mp4');
+        await ff.deleteFile('clip.mp4').catch(() => {});
+        return out;
+      });
+      const fname = `하이라이트_${k.i + 1}번영상_${k.start.toFixed(1)}-${k.end.toFixed(1)}초.mp4`;
+      const blob = new Blob([data.buffer], { type: 'video/mp4' }), url = URL.createObjectURL(blob);
+      hlUrls.push(url);
+      files.push(new File([blob], fname, { type: 'video/mp4' }));
+      box.append(Object.assign(document.createElement('a'), { href: url, download: fname, className: 'big',
+        textContent: `⬇ ${n + 1}. ${k.i + 1}번 영상 ${k.start.toFixed(1)}~${k.end.toFixed(1)}초 저장` }));
+    }
+    if (navigator.canShare?.({ files })) {
+      const b = Object.assign(document.createElement('button'), { className: 'big primary', textContent: '📤 모두 공유 / 사진첩에 저장' });
+      b.onclick = () => navigator.share({ files }).catch(() => {});
+      box.prepend(b);
+    }
+    hlSay(`장면 클립 ${on.length}개 완성! 아래 버튼을 눌러 하나씩 저장하세요.`);
+  } catch (err) {
+    console.error(err); resetEngine();
+    hlSay('장면 클립을 만들지 못했어요. 3번에서 "빠르게 720p"를 고르고 다시 해 보세요.');
+  } finally { lock(false); }
+});
 $('#hlMake').addEventListener('click', async () => {
   const on = cands.filter((k) => k.on).sort((a, b) => a.i - b.i || a.start - b.start);
   if (!on.length) { alert('샘플에 쓸 장면을 하나 이상 골라 주세요.'); return; }
