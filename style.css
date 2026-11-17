@@ -131,3 +131,10 @@ dialog h3 { margin: 0 0 4px; }
 .credit { text-align: center; color: var(--sub); padding: 8px 16px 32px; } .credit b { color: var(--accent); }
 .credit .stats { display: inline-block; margin-top: 6px; } .credit .stats b { color: var(--text); }
 .hlfiles { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; } .hlfiles .big { margin-top: 0; font-size: 16px; min-height: 56px; }
+/* 16:9 wide output: previews take the same shape */
+.seg small { font-weight: 400; opacity: .85; }
+body.wide .frame { flex-basis: 320px; aspect-ratio: 16/9; }
+body.wide .stage { max-width: 420px; aspect-ratio: 16/9; }
+body.wide #result video { max-width: 560px; aspect-ratio: 16/9; }
+body.wide .cand video { aspect-ratio: 16/9; }
+@media (max-width: 600px) { body.wide .frame { flex-basis: auto; width: 100%; max-width: none; } }

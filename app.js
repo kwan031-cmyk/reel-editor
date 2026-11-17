@@ -4,7 +4,9 @@ import { STEP, envelope, findSpikes, motion, scores, pickHighlights, candidates,
 
 const $ = (s) => document.querySelector(s);
 let clips = []; // { file, url, dur, start, end, text, trans, fix, ana, el }
-const opt = { fit: 'cover', pos: 'bot', size: 'm', font: 'BHS', keepOrig: '1', q: '1080', music: null, vol: 70, hlLen: '15' };
+const opt = { fit: 'cover', pos: 'bot', size: 'm', font: 'BHS', keepOrig: '1', q: '1080', music: null, vol: 70, hlLen: '15', ratio: '9:16' };
+// output size for a quality ('1080' / '720') in the chosen shape
+const dims = (q) => { const [s, l] = q === '720' ? [720, 1280] : [1080, 1920]; return opt.ratio === '16:9' ? [l, s] : [s, l]; };
 const MIN = 0.3; // shortest clip in seconds
 // transitions: key = ffmpeg xfade name ('cut' = none)
 const TRANS = {
@@ -354,7 +356,8 @@ document.querySelectorAll('.seg').forEach((seg) => seg.addEventListener('click',
   seg.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
   opt[seg.dataset.k] = b.dataset.v;
   document.body.classList.toggle('contain', opt.fit === 'contain');
-  if (['pos', 'size', 'font'].includes(seg.dataset.k)) clips.forEach(drawPreview);
+  document.body.classList.toggle('wide', opt.ratio === '16:9');
+  if (['pos', 'size', 'font', 'ratio'].includes(seg.dataset.k)) clips.forEach(drawPreview);
 }));
 $('#musicVol').addEventListener('input', (e) => { opt.vol = +e.target.value; $('#musicVolV').textContent = `${opt.vol}%`; });
 $('#musicPick').addEventListener('change', (e) => {
@@ -392,7 +395,7 @@ async function textCanvas(text, W, H) {
   const cv = document.createElement('canvas');
   cv.width = W; cv.height = H;
   const g = cv.getContext('2d');
-  const px = Math.round(W * { s: 0.06, m: 0.085, l: 0.115 }[opt.size]);
+  const px = Math.round(Math.min(W, H) * { s: 0.06, m: 0.085, l: 0.115 }[opt.size]); // short side, so 16:9 text isn't huge
   g.font = `${opt.font === 'PEN' ? Math.round(px * 1.3) : px}px ${opt.font}, sans-serif`; // pen script draws small
   g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
   g.lineWidth = px * 0.18; g.strokeStyle = 'rgba(0,0,0,.85)'; g.fillStyle = '#fff';
@@ -406,7 +409,7 @@ async function textCanvas(text, W, H) {
 async function drawPreview(c) {
   const img = c.el.querySelector('.txt');
   if (!c.text.trim()) { img.hidden = true; return; }
-  img.src = (await textCanvas(c.text, 540, 960)).toDataURL();
+  img.src = (await textCanvas(c.text, ...dims('720'))).toDataURL();
   img.hidden = false;
 }
 
@@ -468,14 +471,14 @@ function renderCands(list, chosen) {
   candInfo();
 }
 
-// each chosen scene as its own 9:16 mp4 (screen fit + quality from step 3, original sound, no text)
+// each chosen scene as its own mp4 in the chosen shape (screen fit + quality from step 3, original sound, no text)
 let hlUrls = [];
 $('#hlSave').addEventListener('click', async () => {
   const on = cands.filter((k) => k.on).sort((a, b) => a.i - b.i || a.start - b.start);
   if (!on.length) { alert('저장할 장면을 하나 이상 골라 주세요.'); return; }
   if (busy) return;
   lock(true);
-  const [W, H] = opt.q === '720' ? [720, 1280] : [1080, 1920];
+  const [W, H] = dims(opt.q);
   const box = $('#hlFiles');
   hlUrls.forEach((u) => URL.revokeObjectURL(u));
   hlUrls = [];
@@ -629,7 +632,7 @@ async function make(sample) {
   lock(true);
   $('#prog').hidden = false; $('#result').hidden = true; bar(0);
   if (sample) $('#prog').scrollIntoView({ behavior: 'smooth', block: 'center' });
-  const [W, H] = sample || opt.q === '720' ? [720, 1280] : [1080, 1920];
+  const [W, H] = dims(sample ? '720' : opt.q);
   const keepOrig = opt.keepOrig === '1';
   const t0 = Date.now();
   try {
