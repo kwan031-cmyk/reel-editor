@@ -1,12 +1,13 @@
 // Tiny static server so phones on the same Wi-Fi can open the app. No packages needed.
 const http = require('http'), fs = require('fs'), path = require('path'), os = require('os');
-const ROOT = __dirname, PORT = Number(process.env.PORT) || 8080;
+const ROOT = __dirname;
+let PORT = Number(process.env.PORT) || 8080;
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8', '.wasm': 'application/wasm',
   '.png': 'image/png', '.svg': 'image/svg+xml', '.ttf': 'font/ttf', '.mp4': 'video/mp4',
 };
-http.createServer((req, res) => {
+const server = http.createServer((req, res) => {
   let p;
   try { p = decodeURIComponent(new URL(req.url, 'http://x').pathname); } catch { res.writeHead(400); return res.end(); }
   if (p.endsWith('/')) p += 'index.html';
@@ -17,7 +18,10 @@ http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': MIME[path.extname(file).toLowerCase()] || 'application/octet-stream', 'Content-Length': st.size, 'Cache-Control': 'no-cache' });
     fs.createReadStream(file).pipe(res);
   });
-}).listen(PORT, '0.0.0.0', () => {
+});
+// port busy (another copy already running) -> try the next one
+server.on('error', (e) => { if (e.code !== 'EADDRINUSE' || PORT > 8090) throw e; server.listen(++PORT, '0.0.0.0'); });
+server.listen(PORT, '0.0.0.0', () => {
   const ips = Object.values(os.networkInterfaces()).flat().filter((i) => i && i.family === 'IPv4' && !i.internal).map((i) => i.address);
   console.log('\n  숏폼 뚝딝이 켜졌어요. 이 창을 닫으면 꺼져요.\n');
   console.log(`  PC에서:  http://localhost:${PORT}`);
