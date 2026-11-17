@@ -358,8 +358,14 @@ document.querySelectorAll('.seg').forEach((seg) => seg.addEventListener('click',
   document.body.classList.toggle('contain', opt.fit === 'contain');
   document.body.classList.toggle('wide', opt.ratio === '16:9');
   if (['pos', 'size', 'font', 'ratio'].includes(seg.dataset.k)) clips.forEach(drawPreview);
-  if (seg.dataset.k === 'trSec') renderTotal();
+  if (seg.dataset.k === 'trSec') { $('#trSecIn').value = opt.trSec; renderTotal(); }
 }));
+$('#trSecIn').addEventListener('change', (e) => {
+  const v = Math.min(3, Math.max(0.1, Math.round(+e.target.value * 10) / 10 || 0.4)); // keep it sane; clips still cap it at half their length
+  e.target.value = opt.trSec = String(v);
+  document.querySelectorAll('[data-k=trSec] button').forEach((x) => x.classList.toggle('on', +x.dataset.v === v));
+  renderTotal();
+});
 $('#musicVol').addEventListener('input', (e) => { opt.vol = +e.target.value; $('#musicVolV').textContent = `${opt.vol}%`; });
 $('#musicPick').addEventListener('change', (e) => {
   const f = e.target.files[0];
