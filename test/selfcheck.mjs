@@ -69,12 +69,13 @@ const cases = [
   { name: 'no audio', keepOrig: false, music: null, fit: 'cover', trans: ['cut', 'cut'] },
   { name: 'transitions mixed', keepOrig: true, music: { path: 'm.m4a' }, fit: 'cover', trans: ['zoomin', 'cut'] },
   { name: 'transitions all', keepOrig: true, music: null, fit: 'cover', trans: ['fadewhite', 'slideleft'] },
+  { name: 'transitions long', keepOrig: true, music: null, fit: 'cover', trans: ['fade', 'zoomin'], trSec: 0.7 },
 ];
 for (const c of cases) {
   const clips = base.map((b, i) => ({ ...b, trans: c.trans[i] }));
   const out = c.name.replace(/\W+/g, '_') + '.mp4';
-  const { args, total } = buildArgs({ clips, music: c.music, keepOrig: c.keepOrig, fit: c.fit, W: 360, H: 640, out });
-  const expected = 4.5 - c.trans.filter((t) => t !== 'cut').length * TRANS_SEC;
+  const { args, total } = buildArgs({ clips, music: c.music, keepOrig: c.keepOrig, fit: c.fit, W: 360, H: 640, out, trSec: c.trSec });
+  const expected = 4.5 - c.trans.reduce((s, t, i) => s + (t === 'cut' ? 0 : Math.min(c.trSec ?? TRANS_SEC, base[i].dur / 2, base[i + 1].dur / 2)), 0);
   assert.ok(Math.abs(total - expected) < 0.01, `${c.name}: total ${total}`);
   run('ffmpeg', args);
   assert.ok(existsSync(join(dir, out)), c.name);

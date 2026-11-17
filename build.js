@@ -4,7 +4,7 @@
 // music: { path, vol? (1 = original loudness) } | null
 export const TRANS_SEC = 0.4;
 
-export function buildArgs({ clips, music, keepOrig, fit, W, H, out = 'out.mp4' }) {
+export function buildArgs({ clips, music, keepOrig, fit, W, H, out = 'out.mp4', trSec = TRANS_SEC }) {
   const a = ['-hide_banner'], f = [];
   let n = 0;
   const AF = 'aresample=44100,aformat=sample_fmts=fltp:channel_layouts=stereo';
@@ -37,7 +37,7 @@ export function buildArgs({ clips, music, keepOrig, fit, W, H, out = 'out.mp4' }
   let vc = '[v0]', ac = keepOrig ? '[a0]' : null, total = clips[0].dur;
   for (let i = 1; i < clips.length; i++) {
     const tr = clips[i - 1].trans || 'cut';
-    const d = Math.min(TRANS_SEC, clips[i - 1].dur / 2, clips[i].dur / 2);
+    const d = Math.min(trSec, clips[i - 1].dur / 2, clips[i].dur / 2);
     if (tr === 'cut') {
       f.push(`${vc}[v${i}]concat=n=2:v=1:a=0[vj${i}]`);
       if (ac) f.push(`${ac}[a${i}]concat=n=2:v=0:a=1[aj${i}]`);

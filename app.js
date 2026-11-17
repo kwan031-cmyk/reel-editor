@@ -4,7 +4,7 @@ import { STEP, envelope, findSpikes, motion, scores, pickHighlights, candidates,
 
 const $ = (s) => document.querySelector(s);
 let clips = []; // { file, url, dur, start, end, text, trans, fix, ana, el }
-const opt = { fit: 'cover', pos: 'bot', size: 'm', font: 'BHS', keepOrig: '1', q: '1080', music: null, vol: 70, hlLen: '15', ratio: '9:16' };
+const opt = { fit: 'cover', pos: 'bot', size: 'm', font: 'BHS', keepOrig: '1', q: '1080', music: null, vol: 70, hlLen: '15', ratio: '9:16', trSec: String(TRANS_SEC) };
 // output size for a quality ('1080' / '720') in the chosen shape
 const dims = (q) => { const [s, l] = q === '720' ? [720, 1280] : [1080, 1920]; return opt.ratio === '16:9' ? [l, s] : [s, l]; };
 const MIN = 0.3; // shortest clip in seconds
@@ -133,7 +133,7 @@ function addFiles(files) {
   }
   if (first) sel = first;
   // new files become part of the base list, so the highlight undo point no longer applies
-  if (first && backup) { dropClips(backup.filter((b) => !clips.includes(b)), true); backup = null; $('#hlUndo').hidden = true; }
+  if (first && backup) { dropClips(backup.filter((b) => !clips.includes(b)), true); backup = null; $('#hlUndo').hidden = $('#hlSample').hidden = true; }
   renderList();
 }
 
@@ -345,7 +345,7 @@ $('#strip').addEventListener('keydown', (e) => {
   if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); moveClip(c, clips.indexOf(c) + (e.key === 'ArrowLeft' ? -1 : 1)); c.tile.focus(); }
 });
 function renderTotal() {
-  const t = clips.reduce((s, c, i) => s + (c.end - c.start) - (i < clips.length - 1 && c.trans !== 'cut' ? TRANS_SEC : 0), 0);
+  const t = clips.reduce((s, c, i) => s + (c.end - c.start) - (i < clips.length - 1 && c.trans !== 'cut' ? +opt.trSec : 0), 0);
   $('#total').textContent = clips.length ? `전체 길이: ${sec(t)}${t > 90 ? ' — 릴스는 90초까지라 조금 줄이는 게 좋아요' : ''}` : '';
 }
 
@@ -358,6 +358,7 @@ document.querySelectorAll('.seg').forEach((seg) => seg.addEventListener('click',
   document.body.classList.toggle('contain', opt.fit === 'contain');
   document.body.classList.toggle('wide', opt.ratio === '16:9');
   if (['pos', 'size', 'font', 'ratio'].includes(seg.dataset.k)) clips.forEach(drawPreview);
+  if (seg.dataset.k === 'trSec') renderTotal();
 }));
 $('#musicVol').addEventListener('input', (e) => { opt.vol = +e.target.value; $('#musicVolV').textContent = `${opt.vol}%`; });
 $('#musicPick').addEventListener('change', (e) => {
@@ -430,7 +431,7 @@ $('#hlBtn').addEventListener('click', async () => {
     hlSrc = src;
     renderCands(candidates(items, segLenFor(target, src.length), 5).sort((a, b) => a.i - b.i || a.start - b.start),
       pickHighlights(items, target));
-    hlSay(`장면 ${cands.length}개를 찾았어요. 장면을 누르면 미리 볼 수 있어요. 쓸 장면을 고르고 "샘플 만들기"를 누르세요. (★가 많을수록 움직임·소리가 커요)`);
+    hlSay(`장면 ${cands.length}개를 찾았어요. 장면을 누르면 미리 볼 수 있어요. 쓸 장면을 고르고 "배치해서 이어보기"를 누르세요. (★가 많을수록 움직임·소리가 커요)`);
   } catch (err) {
     console.error(err); resetEngine(); hlSay('영상을 살펴보지 못했어요. 다시 눌러 주세요.');
   } finally { lock(false); }
@@ -527,16 +528,23 @@ $('#hlMake').addEventListener('click', async () => {
   sel = clips[0];
   renderList();
   $('#hlUndo').hidden = false;
-  hlSay('샘플 영상을 만드는 중… (4번에서 보여요)');
+  $('#hlSample').hidden = false;
+  hlSay('고른 장면을 아래에 배치했어요. 이어서 보기로 확인하고, 마음에 들면 "샘플 저장"을 누르세요. 순서·트랜지션은 아래에서 바꿀 수 있어요.');
+  stopSeq();
+  $('#seq').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  $('#seqPlay').click();
+});
+$('#hlSample').addEventListener('click', async () => {
+  if (busy || !clips.length) return;
+  stopSeq();
   await make(true);
-  hlSay('샘플 완성! 4번에서 확인해 보세요. 다른 장면으로 바꾸려면 위에서 다시 고르고 "샘플 만들기"를 누르세요. 마음에 들면 3번에서 화질을 고르고 "영상 만들기"를 누르세요.');
 });
 $('#hlUndo').addEventListener('click', () => {
   if (!backup || busy) return;
   dropClips(clips, true);
   clips = backup; backup = null; sel = clips[0];
   renderList();
-  $('#hlUndo').hidden = true;
+  $('#hlUndo').hidden = $('#hlSample').hidden = true;
   hlSay('찾기 전 영상으로 돌아왔어요.');
 });
 
@@ -607,7 +615,7 @@ $('#seqPlay').addEventListener('click', async () => {
     const c = list[i], n = list[i + 1];
     showText(c);
     const ready = n ? prep(nxt, n) : null; // load the next clip while this one plays
-    const d = n && c.trans !== 'cut' ? Math.min(TRANS_SEC, (c.end - c.start) / 2, (n.end - n.start) / 2) : 0;
+    const d = n && c.trans !== 'cut' ? Math.min(+opt.trSec, (c.end - c.start) / 2, (n.end - n.start) / 2) : 0;
     await until(run, () => cur.currentTime >= c.end - d || cur.ended);
     if (run.stop || !n) break;
     await ready;
@@ -655,7 +663,7 @@ async function make(sample) {
         items.push(it);
       }
       const music = opt.music ? { path: `${dir}/music${ext(opt.music.name)}`, vol: opt.vol / 100 } : null;
-      const { args, total } = buildArgs({ clips: items, music, keepOrig, fit: opt.fit, W, H });
+      const { args, total } = buildArgs({ clips: items, music, keepOrig, fit: opt.fit, W, H, trSec: +opt.trSec });
       onLog = (m) => {
         const t = secOf(m);
         if (t == null) return;

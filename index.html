@@ -40,7 +40,8 @@
       <p id="hlMsg" class="hint" hidden></p>
       <div id="cands" class="cands" hidden></div>
       <p id="candInfo" class="total" hidden></p>
-      <button class="big primary" id="hlMake" hidden>🎬 고른 장면으로 샘플 만들기</button>
+      <button class="big primary" id="hlMake" hidden>▶ 고른 장면 배치해서 이어보기</button>
+      <button class="big" id="hlSample" hidden>💾 이 배치로 샘플 저장 (720p mp4)</button>
       <button class="big" id="hlSave" hidden>⬇ 고른 장면 클립으로 저장 (하나씩 mp4)</button>
       <div id="hlFiles" class="hlfiles" hidden></div>
       <button class="link" id="hlUndo" hidden>↩ 되돌리기 (찾기 전 영상으로)</button>
@@ -184,6 +185,13 @@
   <p class="hint">움직이는 그림처럼 A 영상에서 B 영상으로 넘어가요. 눌러서 고르세요.</p>
   <div id="trGrid" class="trgrid"></div>
   <label class="fix"><input type="checkbox" id="trAll"> 모든 연결에 똑같이 넣기</label>
+  <p class="hint">넘어가는 시간 (모든 연결에 적용)</p>
+  <div class="seg" data-k="trSec">
+    <button data-v="0.2">0.2초<br><small>빠르게</small></button>
+    <button data-v="0.4" class="on">0.4초<br><small>보통</small></button>
+    <button data-v="0.7">0.7초<br><small>느리게</small></button>
+    <button data-v="1">1초<br><small>아주 느리게</small></button>
+  </div>
   <button class="big" id="trClose">닫기</button>
 </dialog>
 
