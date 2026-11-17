@@ -139,7 +139,7 @@
     </div>
   </section>
 </main>
-<footer class="credit">만든이 <b>CKS</b> · 2026년 11월 17일<br><span class="stats">👀 방문자 <b id="cVisit">-</b>명 · 🎬 만든 영상 <b id="cMade">-</b>개</span></footer>
+<footer class="credit">만든이 <b>CKS</b> · 2026년 11월 17일<br><span class="stats">👀 방문자 <b id="cVisit">-</b>명 · 🎬 만든 영상 <b id="cMade">-</b>개</span><br><button class="linkbtn" id="fbOpen">💬 불편한 점·의견 보내기</button></footer>
 
 <template id="clipTpl">
   <div class="clip">
@@ -180,6 +180,13 @@
   <div class="cand"><video muted playsinline preload="metadata"></video><span class="cmeta"></span><button class="pick"></button></div>
 </template>
 
+<dialog id="fbDlg">
+  <h3>💬 의견 보내기</h3>
+  <p class="hint">불편한 점, 바라는 기능, 무엇이든 적어 주세요. 만든이만 읽어요.</p>
+  <textarea id="fbText" rows="5" maxlength="2000" placeholder="예: 폰에서 저장 버튼이 잘 안 눌려요"></textarea>
+  <p class="hint" id="fbMsg"></p>
+  <div class="btns"><button id="fbClose">닫기</button><button class="big" id="fbSend">보내기</button></div>
+</dialog>
 <dialog id="trDlg">
   <h3 id="trTitle"></h3>
   <p class="hint">움직이는 그림처럼 A 영상에서 B 영상으로 넘어가요. 눌러서 고르세요.</p>

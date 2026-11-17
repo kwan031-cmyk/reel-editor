@@ -138,3 +138,4 @@ body.wide .stage { max-width: 420px; aspect-ratio: 16/9; }
 body.wide #result video { max-width: 560px; aspect-ratio: 16/9; }
 body.wide .cand video { aspect-ratio: 16/9; }
 @media (max-width: 600px) { body.wide .frame { flex-basis: auto; width: 100%; max-width: none; } }
+.linkbtn { background: none; border: 0; color: var(--sub); text-decoration: underline; font: inherit; padding: 8px; cursor: pointer; }

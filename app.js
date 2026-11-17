@@ -737,3 +737,20 @@ const showCount = (id, v) => { if (v != null) $(id).textContent = v.toLocaleStri
   showCount('#cVisit', await counter('visits', seen !== today));
   showCount('#cMade', await counter('videos', false));
 })();
+
+/* ---------- feedback box ----------
+   Sends to a Google Form owned by the site admin; only the admin sees responses (Google Forms > Responses).
+   no-cors: Google gives no readable reply, so a sent message can't be confirmed — only network failure is caught. */
+const FB_FORM = '1FAIpQLSdk9VHF4wbMmGcIX-THY5s_O3-vFxm0mTmkksjYsGrlqMk44Q', FB_ENTRY = 'entry.1560983443';
+$('#fbOpen').addEventListener('click', () => { $('#fbMsg').textContent = ''; $('#fbDlg').showModal(); });
+$('#fbClose').addEventListener('click', () => $('#fbDlg').close());
+$('#fbSend').addEventListener('click', async () => {
+  const text = $('#fbText').value.trim();
+  if (!text) { $('#fbMsg').textContent = '내용을 적어 주세요.'; return; }
+  $('#fbSend').disabled = true; $('#fbMsg').textContent = '보내는 중...';
+  try {
+    await fetch(`https://docs.google.com/forms/d/e/${FB_FORM}/formResponse`, { method: 'POST', mode: 'no-cors', body: new URLSearchParams({ [FB_ENTRY]: text, pageHistory: '0,1' }) }); // pageHistory: the form has 2 sections
+    $('#fbText').value = ''; $('#fbMsg').textContent = '고마워요! 잘 전달됐어요 🙏';
+  } catch { $('#fbMsg').textContent = '인터넷 연결을 확인하고 다시 눌러 주세요.'; }
+  $('#fbSend').disabled = false;
+});

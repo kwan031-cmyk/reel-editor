@@ -1,5 +1,5 @@
 // Network first (revalidating the HTTP cache), cache fallback: fresh right after an update, still opens offline.
-const CACHE = 'reel-editor-v2';
+const CACHE = 'reel-editor-v3';
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (e) => e.waitUntil(
   caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim())));
