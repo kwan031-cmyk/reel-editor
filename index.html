@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#111214">
+<meta name="theme-color" content="#fff4e6">
 <meta name="author" content="CKS">
 <title>숏폼 뚝딝</title>
 <link rel="manifest" href="manifest.json">
@@ -12,185 +12,185 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header>
-  <h1>숏폼 뚝딝</h1>
-  <p>영상을 담고 → 자르고 → 글자 넣고 → 만들기. 영상은 이 기기 밖으로 나가지 않아요.</p>
+<header class="top">
+  <h1>🎬 숏폼 뚝딝</h1>
+  <p>영상만 넣으면 뚝딱! 영상은 이 기기 밖으로 나가지 않아요.</p>
 </header>
 
-<main>
-  <section>
-    <h2><span class="n">1</span> 영상 담기</h2>
-    <label class="big primary">
-      ＋ 영상 고르기 (여러 개 가능)
-      <input id="pick" type="file" accept="video/*,.mov,.mp4,.m4v,.webm" multiple hidden>
-    </label>
-  </section>
-
-  <section>
-    <h2><span class="n">2</span> 자르고 글자 넣기</h2>
-    <div class="hl">
-      <b>✨ 하이라이트 자동 찾기</b>
-      <p class="hint">영상을 살펴보고 움직임이 많고 소리가 큰 장면을 영상마다 여러 개 찾아 줘요. 장면을 눌러 미리 보고, 쓸 장면만 골라서 샘플을 만드세요.</p>
-      <div class="seg" data-k="hlLen">
-        <button data-v="15" class="on">15초</button>
-        <button data-v="30">30초</button>
-        <button data-v="60">60초</button>
-      </div>
-      <button class="big primary" id="autoBtn">🪄 자동으로 뚝딱 만들기</button>
-      <p class="hint">영상 여러 개를 담고 누르기만 하면 하이라이트를 골라 부드럽게 이어 붙여 mp4까지 혼자 만들어요. 직접 고르고 싶으면 아래 버튼을 누르세요.</p>
-      <button class="big" id="hlBtn">✨ 하이라이트 찾기 (직접 고르기)</button>
-      <p id="hlMsg" class="hint" hidden></p>
-      <div id="cands" class="cands" hidden></div>
-      <p id="candInfo" class="total" hidden></p>
-      <button class="big primary" id="hlMake" hidden>▶ 고른 장면 배치해서 이어보기</button>
-      <button class="big" id="hlSample" hidden>💾 이 배치로 샘플 저장 (720p mp4)</button>
-      <button class="big" id="hlSave" hidden>⬇ 고른 장면 클립으로 저장 (하나씩 mp4)</button>
-      <div id="hlFiles" class="hlfiles" hidden></div>
-      <button class="link" id="hlUndo" hidden>↩ 되돌리기 (찾기 전 영상으로)</button>
-    </div>
-    <p class="hint" id="empty">위에서 영상을 고르면 여기에 나와요.</p>
-    <p class="hint" id="stripHint" hidden>순서: 영상을 <b>끌어서</b> 옮기면 순서가 바뀌어요. 누르면 아래에서 그 영상을 편집해요. 영상 사이 동그란 버튼은 <b>트랜지션</b>(넘어가는 효과)이에요. 눌러서 바꾸세요.</p>
-    <div id="strip" class="strip" hidden></div>
-    <div id="seq" class="seq" hidden>
-      <div class="stage" id="seqStage"><video playsinline preload="auto"></video><video playsinline preload="auto"></video><div class="veil"></div><img class="txt" alt="" hidden></div>
-      <button class="big" id="seqPlay">▶ 처음부터 이어서 보기 (트랜지션 포함)</button>
-      <p class="hint">만들기 전에 바로 보는 미리보기예요. 트랜지션은 실제 영상과 거의 같게 보여요.</p>
-      <label class="vol">미리보기 위치 <input type="range" id="seqPos" min="0" max="0" step="0.1" value="0"> <b id="seqPosV">0.0초</b></label>
-      <div class="lyr">
-        <b>🔤 글자 템플릿</b>
-        <p class="hint">템플릿을 누르면 지금 미리보기 위치에 글자가 생겨요. 위 화면을 <b>누르거나 끌어서</b> 위치를 옮기고, 크기와 나오는 시간을 정하세요.</p>
-        <div id="tplRow" class="tplrow"></div>
-        <div id="layerList" class="layerlist"></div>
-        <div id="layerEd" hidden>
-          <textarea id="lyText" rows="2" placeholder="넣을 글자"></textarea>
-          <label class="vol">모양 <select id="lyTpl"></select></label>
-          <label class="vol">크기 <input type="range" id="lySize" min="3" max="20" step="0.5"> <b id="lySizeV"></b></label>
-          <label class="vol">나오는 시간 <input type="number" id="lyT0" min="0" step="0.1" inputmode="decimal" aria-label="시작 초"> ~ <input type="number" id="lyT1" min="0" step="0.1" inputmode="decimal" aria-label="끝 초"> 초</label>
-          <div class="btns">
-            <button id="lyFrom">⏵ 지금 위치부터</button>
-            <button id="lyTo">⏹ 지금 위치까지</button>
-          </div>
-          <div class="btns">
-            <button id="lyDone">✔ 다 됐어요</button>
-            <button id="lyDel" class="del">글자 삭제</button>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div id="list"></div>
+<main class="app">
+  <!-- the one place to watch: preview, order strip, play and make -->
+  <aside class="viewer" id="seq">
+    <div class="screenbar"><div class="screen">
+      <div class="stage" id="seqStage"><video playsinline preload="auto"></video><video playsinline preload="auto"></video><div class="veil"></div></div>
+      <div class="clipslot" id="clipSlot" hidden></div>
+      <div class="outbox" id="result" hidden><video id="outVideo" controls playsinline></video></div>
+      <div class="nothing" id="empty"><b>📂</b>영상을 넣으면<br>여기서 보여요</div>
+    </div></div>
+    <p class="viewname" id="viewName">미리보기</p>
+    <label class="timebar" id="timebar">⏱ <input type="range" id="seqPos" min="0" max="0" step="0.1" value="0" aria-label="미리보기 위치"> <b id="seqPosV">0.0초</b></label>
+    <div class="strip" id="strip" hidden></div>
+    <p class="hint small" id="stripHint" hidden>그림을 끌면 순서가 바뀌어요 · 동그라미는 넘어가는 효과</p>
     <p class="total" id="total"></p>
-  </section>
-
-  <section>
-    <h2><span class="n">3</span> 꾸미기</h2>
-    <div class="opt">
-      <span>화면 비율</span>
-      <div class="seg" data-k="ratio">
-        <button data-v="9:16" class="on">9:16 세로<br><small>릴스·쇼츠</small></button>
-        <button data-v="16:9">16:9 가로<br><small>유튜브</small></button>
-      </div>
+    <div class="playrow">
+      <button class="btn" id="seqPlay">▶ 처음부터 보기</button>
+      <button class="btn" id="backEdit" hidden>✏️ 다시 고치기</button>
     </div>
-    <div class="opt">
-      <span>화면 맞추기</span>
-      <div class="seg" data-k="fit">
-        <button data-v="cover" class="on">꽉 채우기</button>
-        <button data-v="contain">전체 보이기</button>
-      </div>
-    </div>
-    <div class="opt">
-      <span>글자 위치</span>
-      <div class="seg" data-k="pos">
-        <button data-v="top">위</button>
-        <button data-v="mid">가운데</button>
-        <button data-v="bot" class="on">아래</button>
-      </div>
-    </div>
-    <div class="opt">
-      <span>글자 크기</span>
-      <div class="seg" data-k="size">
-        <button data-v="s">작게</button>
-        <button data-v="m" class="on">보통</button>
-        <button data-v="l">크게</button>
-      </div>
-    </div>
-    <div class="opt">
-      <span>글꼴</span>
-      <div class="seg" data-k="font">
-        <button data-v="BHS" class="on" style="font-family:BHS">굵게</button>
-        <button data-v="DOH" style="font-family:DOH">깔끔</button>
-        <button data-v="JUA" style="font-family:JUA">귀엽게</button>
-        <button data-v="PEN" style="font-family:PEN">손글씨</button>
-      </div>
-    </div>
-    <div class="opt">
-      <span>배경 음악</span>
-      <label class="big">
-        🎵 <span id="musicName">음악 고르기 (선택)</span>
-        <input id="musicPick" type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden>
-      </label>
-      <label class="vol">음악 크기 <input type="range" id="musicVol" min="0" max="150" step="5" value="70"> <b id="musicVolV">70%</b></label>
-      <button class="link" id="musicDel" hidden>음악 빼기</button>
-    </div>
-    <div class="opt">
-      <span>영상 원래 소리</span>
-      <div class="seg" data-k="keepOrig">
-        <button data-v="1" class="on">켜기</button>
-        <button data-v="0">끄기</button>
-      </div>
-    </div>
-    <div class="opt">
-      <span>화질</span>
-      <div class="seg" data-k="q">
-        <button data-v="1080" class="on">고화질 1080p</button>
-        <button data-v="720">빠르게 720p</button>
-      </div>
-    </div>
-  </section>
-
-  <section>
-    <h2><span class="n">4</span> mp4로 만들기</h2>
-    <button class="big primary" id="make">🎬 영상 만들기</button>
+    <button class="btn cta" id="make">🎬 영상 만들기</button>
     <div id="prog" hidden>
       <div class="bar"><i id="barFill"></i></div>
-      <p id="progMsg"></p>
+      <p id="progMsg" class="hint"></p>
     </div>
-    <div id="result" hidden>
-      <video id="outVideo" controls playsinline></video>
-      <a class="big primary" id="save" download>💾 저장하기</a>
-      <button class="big" id="share" hidden>📤 공유 / 사진첩에 저장</button>
-      <p class="hint">저장한 영상을 인스타 릴스·유튜브 쇼츠에 올리면 돼요. 고치고 싶으면 위에서 바꾸고 다시 만들기를 누르세요.</p>
+    <div class="saverow" id="saveRow" hidden>
+      <a class="btn cta" id="save" download>💾 저장하기</a>
+      <button class="btn" id="share" hidden>📤 공유 / 사진첩</button>
+    </div>
+  </aside>
+
+  <section class="panel">
+    <nav class="tabs">
+      <button data-tab="add" class="on"><i>1</i>📂<span>넣기</span></button>
+      <button data-tab="cut"><i>2</i>✂️<span>자르기</span></button>
+      <button data-tab="text"><i>3</i>🔤<span>글자</span></button>
+      <button data-tab="music"><i>4</i>🎵<span>음악</span></button>
+      <button data-tab="more"><i>5</i>⚙️<span>모양</span></button>
+    </nav>
+
+    <div class="pane" data-pane="add">
+      <h2>영상을 넣어요</h2>
+      <label class="btn cta big">
+        ＋ 영상 고르기 <small>(여러 개 OK)</small>
+        <input id="pick" type="file" accept="video/*,.mov,.mp4,.m4v,.webm" multiple hidden>
+      </label>
+      <div class="magic">
+        <h3>🪄 알아서 뚝딱 만들기</h3>
+        <p class="hint">재미있는 장면만 골라 이어 붙이고 영상까지 다 만들어 줘요. 몇 초짜리로 만들까요?</p>
+        <div class="seg" data-k="hlLen">
+          <button data-v="15" class="on">15초</button>
+          <button data-v="30">30초</button>
+          <button data-v="60">60초</button>
+        </div>
+        <button class="btn cta big" id="autoBtn">🪄 뚝딱 만들기</button>
+        <p id="hlMsg" class="msg hlmsg" hidden></p>
+      </div>
+      <button class="btn next" data-go="cut">다음: 자르기 ▶</button>
+    </div>
+
+    <div class="pane" data-pane="cut" hidden>
+      <h2>필요한 부분만 남겨요</h2>
+      <p class="hint" id="cutHint">먼저 1번에서 영상을 넣어요.</p>
+      <div id="list"></div>
+      <details class="more">
+        <summary>✨ 좋은 장면 직접 고르기</summary>
+        <p class="hint">움직임이 많고 소리가 큰 장면을 찾아 줘요. 장면을 눌러 보고, 쓸 것만 골라요.</p>
+        <button class="btn" id="hlBtn">✨ 좋은 장면 찾기</button>
+        <p class="msg hlmsg" hidden></p>
+        <div id="cands" class="cands" hidden></div>
+        <p id="candInfo" class="total" hidden></p>
+        <button class="btn cta" id="hlMake" hidden>▶ 고른 장면으로 바꾸기</button>
+        <button class="btn" id="hlSample" hidden>💾 빠른 샘플 만들기 (720p)</button>
+        <button class="btn" id="hlSave" hidden>⬇ 장면마다 따로 저장</button>
+        <div id="hlFiles" class="hlfiles" hidden></div>
+        <button class="link" id="hlUndo" hidden>↩ 처음 영상으로 되돌리기</button>
+      </details>
+      <button class="btn next" data-go="text">다음: 글자 ▶</button>
+    </div>
+
+    <div class="pane" data-pane="text" hidden>
+      <h2>글자를 넣어요</h2>
+      <p class="hint">⏱ 막대로 글자가 나올 때로 가서 모양을 눌러요. 그다음 화면을 <b>누르거나 끌어서</b> 자리를 옮겨요.</p>
+      <div id="tplRow" class="tplrow"></div>
+      <div id="layerList" class="layerlist"></div>
+      <div id="layerEd" class="editor" hidden>
+        <textarea id="lyText" rows="2" placeholder="넣을 글자"></textarea>
+        <p class="lbl">모양</p><select id="lyTpl"></select>
+        <p class="lbl">글씨체</p><div class="chips" id="lyFont"></div>
+        <p class="lbl">색깔</p><div class="chips colors" id="lyColor"></div>
+        <p class="lbl">크기 <b id="lySizeV"></b></p>
+        <input type="range" id="lySize" min="3" max="20" step="0.5" aria-label="크기">
+        <p class="lbl">나오는 때</p>
+        <div class="when"><input type="number" id="lyT0" min="0" step="0.1" inputmode="decimal" aria-label="시작 초"> 초부터 <input type="number" id="lyT1" min="0" step="0.1" inputmode="decimal" aria-label="끝 초"> 초까지</div>
+        <div class="btns">
+          <button class="btn" id="lyFrom">⏵ 지금부터</button>
+          <button class="btn" id="lyTo">⏹ 지금까지</button>
+        </div>
+        <div class="btns">
+          <button class="btn cta" id="lyDone">✔ 다 했어요</button>
+          <button class="btn del" id="lyDel">🗑 지우기</button>
+        </div>
+      </div>
+      <button class="btn next" data-go="music">다음: 음악 ▶</button>
+    </div>
+
+    <div class="pane" data-pane="music" hidden>
+      <h2>음악을 넣어요 <small>(안 넣어도 돼요)</small></h2>
+      <label class="btn big">
+        🎵 <span id="musicName">음악 고르기</span>
+        <input id="musicPick" type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden>
+      </label>
+      <p class="lbl">음악 소리 <b id="musicVolV">70%</b></p>
+      <input type="range" id="musicVol" min="0" max="150" step="5" value="70" aria-label="음악 소리">
+      <button class="link" id="musicDel" hidden>음악 빼기</button>
+      <p class="lbl">영상 원래 소리</p>
+      <div class="seg" data-k="keepOrig">
+        <button data-v="1" class="on">🔊 켜기</button>
+        <button data-v="0">🔇 끄기</button>
+      </div>
+      <button class="btn next" data-go="more">다음: 모양 ▶</button>
+    </div>
+
+    <div class="pane" data-pane="more" hidden>
+      <h2>영상 모양을 골라요</h2>
+      <p class="lbl">어디에 올려요?</p>
+      <div class="seg" data-k="ratio">
+        <button data-v="9:16" class="on">📱 세로<br><small>릴스·쇼츠</small></button>
+        <button data-v="16:9">🖥 가로<br><small>유튜브</small></button>
+      </div>
+      <p class="lbl">화면 채우기</p>
+      <div class="seg" data-k="fit">
+        <button data-v="cover" class="on">꽉 채우기</button>
+        <button data-v="contain">전부 보이기</button>
+      </div>
+      <p class="lbl">화질</p>
+      <div class="seg" data-k="q">
+        <button data-v="1080" class="on">선명하게<br><small>1080p</small></button>
+        <button data-v="720">빠르게<br><small>720p</small></button>
+      </div>
+      <p class="hint">다 됐으면 <b>🎬 영상 만들기</b>를 눌러요!</p>
     </div>
   </section>
 </main>
-<footer class="credit">만든이 <b>CKS</b> · 2026년 11월 17일<br><span class="stats">👀 방문자 <b id="cVisit">-</b>명 · 🎬 만든 영상 <b id="cMade">-</b>개</span><br><button class="linkbtn" id="fbOpen">💬 불편한 점·의견 보내기</button></footer>
+<footer class="credit">만든이 <b>CKS</b> · 👀 방문 <b id="cVisit">-</b> · 🎬 만든 영상 <b id="cMade">-</b> · <button class="link" id="fbOpen">💬 의견 보내기</button></footer>
 
 <template id="clipTpl">
   <div class="clip">
-    <div class="frame"><video playsinline preload="metadata" controls muted></video><img class="txt" alt="" hidden></div>
+    <div class="frame"><video playsinline preload="metadata" controls></video></div>
     <div class="ctrl">
       <div class="head"><b class="no"></b><span class="len"></span></div>
       <p class="warn" hidden>이 영상은 미리보기가 안 되지만 만들기는 돼요.</p>
-      <label>시작 <input type="number" class="sn" min="0" step="0.1" inputmode="decimal" aria-label="시작 초"> 초<input type="range" class="s" min="0" step="0.1"></label>
-      <label>끝 <input type="number" class="en" min="0" step="0.1" inputmode="decimal" aria-label="끝 초"> 초<input type="range" class="e" min="0" step="0.1"></label>
+      <p class="hint">위 화면에서 영상을 틀고 버튼을 눌러요.</p>
       <div class="btns">
-        <button data-a="setS">⏵ 지금 위치부터</button>
-        <button data-a="setE">⏹ 지금 위치까지</button>
+        <button class="btn" data-a="setS">⏵ 여기부터</button>
+        <button class="btn" data-a="setE">⏹ 여기까지</button>
       </div>
-      <textarea class="t" rows="2" placeholder="이 장면에 넣을 글자 (없어도 돼요)"></textarea>
-      <div class="snd">
-        <button data-a="spike">🔊 튀는 소리 찾기</button>
-        <canvas class="wave" hidden></canvas>
-        <p class="spk" hidden></p>
-        <label class="fix" hidden><input type="checkbox" checked> 튀는 부분 소리 줄이기</label>
-      </div>
-      <label class="tr">트랜지션 (다음 영상으로 넘어가는 효과)
-        <select class="trans"></select>
-      </label>
+      <label class="rng">시작 <input type="range" class="s" min="0" step="0.1"><input type="number" class="sn" min="0" step="0.1" inputmode="decimal" aria-label="시작 초">초</label>
+      <label class="rng">끝 <input type="range" class="e" min="0" step="0.1"><input type="number" class="en" min="0" step="0.1" inputmode="decimal" aria-label="끝 초">초</label>
       <div class="btns">
-        <button data-a="up" aria-label="앞으로">◀ 앞으로</button>
-        <button data-a="down" aria-label="뒤로">뒤로 ▶</button>
-        <button data-a="del" class="del">삭제</button>
+        <button class="btn" data-a="up" aria-label="앞으로">◀ 앞으로</button>
+        <button class="btn" data-a="down" aria-label="뒤로">뒤로 ▶</button>
+        <button class="btn del" data-a="del">🗑 빼기</button>
       </div>
+      <details class="more">
+        <summary>더 하기 (넘어가는 효과 · 튀는 소리)</summary>
+        <label class="tr">다음 영상으로 넘어가는 효과
+          <select class="trans"></select>
+        </label>
+        <div class="snd">
+          <button class="btn" data-a="spike">🔊 튀는 소리 찾기</button>
+          <canvas class="wave" hidden></canvas>
+          <p class="spk" hidden></p>
+          <label class="fix" hidden><input type="checkbox" checked> 튀는 부분 소리 줄이기</label>
+        </div>
+      </details>
     </div>
   </div>
 </template>
@@ -208,14 +208,14 @@
   <p class="hint">불편한 점, 바라는 기능, 무엇이든 적어 주세요. 만든이만 읽어요.</p>
   <textarea id="fbText" rows="5" maxlength="2000" placeholder="예: 폰에서 저장 버튼이 잘 안 눌려요"></textarea>
   <p class="hint" id="fbMsg"></p>
-  <div class="btns"><button id="fbClose">닫기</button><button class="big" id="fbSend">보내기</button></div>
+  <div class="btns"><button class="btn" id="fbClose">닫기</button><button class="btn cta" id="fbSend">보내기</button></div>
 </dialog>
 <dialog id="trDlg">
   <h3 id="trTitle"></h3>
-  <p class="hint">움직이는 그림처럼 A 영상에서 B 영상으로 넘어가요. 눌러서 고르세요.</p>
+  <p class="hint">A 영상에서 B 영상으로 이렇게 넘어가요. 눌러서 골라요.</p>
   <div id="trGrid" class="trgrid"></div>
   <label class="fix"><input type="checkbox" id="trAll"> 모든 연결에 똑같이 넣기</label>
-  <p class="hint">넘어가는 시간 (모든 연결에 적용)</p>
+  <p class="lbl">넘어가는 시간 (모든 연결에 적용)</p>
   <div class="seg" data-k="trSec">
     <button data-v="0.2">0.2초<br><small>빠르게</small></button>
     <button data-v="0.4" class="on">0.4초<br><small>보통</small></button>
@@ -223,7 +223,7 @@
     <button data-v="1">1초<br><small>아주 느리게</small></button>
   </div>
   <label class="fix">직접 입력 <input type="number" id="trSecIn" value="0.4" min="0.1" max="3" step="0.1" inputmode="decimal" style="width:5em"> 초 (0.1~3)</label>
-  <button class="big" id="trClose">닫기</button>
+  <button class="btn" id="trClose">닫기</button>
 </dialog>
 
 <script type="module" src="app.js"></script>

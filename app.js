@@ -4,7 +4,7 @@ import { STEP, envelope, findSpikes, motion, scores, pickHighlights, candidates,
 
 const $ = (s) => document.querySelector(s);
 let clips = []; // { file, url, dur, start, end, text, trans, fix, ana, el }
-const opt = { fit: 'cover', pos: 'bot', size: 'm', font: 'BHS', keepOrig: '1', q: '1080', music: null, vol: 70, hlLen: '15', ratio: '9:16', trSec: String(TRANS_SEC) };
+const opt = { fit: 'cover', keepOrig: '1', q: '1080', music: null, vol: 70, hlLen: '15', ratio: '9:16', trSec: String(TRANS_SEC) };
 // output size for a quality ('1080' / '720') in the chosen shape
 const dims = (q) => { const [s, l] = q === '720' ? [720, 1280] : [1080, 1920]; return opt.ratio === '16:9' ? [l, s] : [s, l]; };
 const MIN = 0.3; // shortest clip in seconds
@@ -109,7 +109,7 @@ function newClip(file, extra = {}) {
   return c;
 }
 function dropClips(list, revoke) {
-  list.forEach((c) => { c.el.remove(); c.tile.remove(); c.chip.remove(); if (revoke) URL.revokeObjectURL(c.url); });
+  list.forEach((c) => { c.el.remove(); c.frame.remove(); c.tile.remove(); c.chip.remove(); if (revoke) URL.revokeObjectURL(c.url); });
 }
 function setTrans(c, t) {
   c.trans = t;
@@ -143,6 +143,7 @@ function makeCard(c) {
   const v = q('video');
   v.src = c.url;
   c.el = el;
+  c.frame = q('.frame'); // shown in the viewer while cutting this clip
   const init = (dur) => {
     c.dur = dur;
     if (!c.end || c.end > dur) c.end = dur;
@@ -170,7 +171,6 @@ function makeCard(c) {
   // typed seconds: applied on Enter or when leaving the box
   q('.sn').addEventListener('change', (e) => { setRange(c, +e.target.value || 0, c.end, 's'); v.currentTime = c.start; });
   q('.en').addEventListener('change', (e) => { setRange(c, c.start, +e.target.value || 0, 'e'); v.currentTime = c.end; });
-  q('.t').addEventListener('input', (ev) => { c.text = ev.target.value; drawPreview(c); });
   q('.trans').addEventListener('change', (ev) => setTrans(c, ev.target.value));
   q('.fix input').addEventListener('change', (ev) => { c.fix = ev.target.checked; });
   el.addEventListener('click', async (ev) => {
@@ -265,8 +265,9 @@ function renderList() {
   clips.flatMap((c) => [c.tile, c.chip]).forEach((node, k) => {
     if (strip.children[k] !== node) strip.insertBefore(node, strip.children[k] || null);
   });
-  $('#empty').hidden = clips.length > 0;
-  strip.hidden = $('#stripHint').hidden = $('#seq').hidden = !clips.length;
+  strip.hidden = $('#stripHint').hidden = !clips.length;
+  $('#cutHint').textContent = clips.length ? '아래 그림에서 고칠 영상을 눌러요. 위 화면에서 영상을 틀고 "여기부터 / 여기까지"를 눌러요.' : '먼저 1번에서 영상을 넣어요.';
+  refreshView();
   renderTotal();
 }
 
@@ -332,7 +333,7 @@ $('#strip').addEventListener('pointerdown', (e) => {
     removeEventListener('pointercancel', up);
     tile.classList.remove('drag');
     tile.style.transform = '';
-    if (!dragging) { sel = c; renderList(); }
+    if (!dragging) { sel = c; renderList(); goTab('cut'); }
   };
   addEventListener('pointermove', move);
   addEventListener('pointerup', up);
@@ -341,12 +342,13 @@ $('#strip').addEventListener('pointerdown', (e) => {
 $('#strip').addEventListener('keydown', (e) => {
   const c = clips.find((x) => x.tile === e.target);
   if (!c || busy) return;
-  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); sel = c; renderList(); }
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); sel = c; renderList(); goTab('cut'); }
   if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); moveClip(c, clips.indexOf(c) + (e.key === 'ArrowLeft' ? -1 : 1)); c.tile.focus(); }
 });
 function renderTotal() {
   const t = clips.reduce((s, c, i) => s + (c.end - c.start) - (i < clips.length - 1 && c.trans !== 'cut' ? +opt.trSec : 0), 0);
   $('#seqPos').max = timeline().total.toFixed(1);
+  if (view === 'seq' && !seqRun && !busy) showAt(nowT); // keep a frame on screen instead of black
   $('#total').textContent = clips.length ? `전체 길이: ${sec(t)}${t > 90 ? ' — 릴스는 90초까지라 조금 줄이는 게 좋아요' : ''}` : '';
 }
 
@@ -358,7 +360,6 @@ document.querySelectorAll('.seg').forEach((seg) => seg.addEventListener('click',
   opt[seg.dataset.k] = b.dataset.v;
   document.body.classList.toggle('contain', opt.fit === 'contain');
   document.body.classList.toggle('wide', opt.ratio === '16:9');
-  if (['pos', 'size', 'font', 'ratio'].includes(seg.dataset.k)) clips.forEach(drawPreview);
   if (seg.dataset.k === 'ratio') texts.forEach(paintLayer);
   if (seg.dataset.k === 'trSec') { $('#trSecIn').value = opt.trSec; renderTotal(); }
 }));
@@ -399,31 +400,9 @@ function wrap(g, text, maxW) {
   }
   return out;
 }
-async function textCanvas(text, W, H) {
-  await document.fonts.load(`40px ${opt.font}`).catch(() => {});
-  const cv = document.createElement('canvas');
-  cv.width = W; cv.height = H;
-  const g = cv.getContext('2d');
-  const px = Math.round(Math.min(W, H) * { s: 0.06, m: 0.085, l: 0.115 }[opt.size]); // short side, so 16:9 text isn't huge
-  g.font = `${opt.font === 'PEN' ? Math.round(px * 1.3) : px}px ${opt.font}, sans-serif`; // pen script draws small
-  g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
-  g.lineWidth = px * 0.18; g.strokeStyle = 'rgba(0,0,0,.85)'; g.fillStyle = '#fff';
-  const lines = wrap(g, text.trim(), W * 0.86);
-  const lh = px * 1.25;
-  // bottom stays above the area Instagram covers with its buttons/caption
-  const y0 = H * { top: 0.2, mid: 0.5, bot: 0.7 }[opt.pos] - ((lines.length - 1) * lh) / 2;
-  lines.forEach((l, i) => { g.strokeText(l, W / 2, y0 + i * lh); g.fillText(l, W / 2, y0 + i * lh); });
-  return cv;
-}
-async function drawPreview(c) {
-  const img = c.el.querySelector('.txt');
-  if (!c.text.trim()) { img.hidden = true; return; }
-  img.src = (await textCanvas(c.text, ...dims('720'))).toDataURL();
-  img.hidden = false;
-}
 
 /* ---------- highlights: look through every clip, keep the liveliest parts, make a quick sample ---------- */
-const hlSay = (m) => { $('#hlMsg').hidden = false; $('#hlMsg').textContent = m; };
+const hlSay = (m) => document.querySelectorAll('.hlmsg').forEach((x) => { x.hidden = false; x.textContent = m; });
 let cands = [], hlSrc = []; // candidate scenes and the original clips they come from
 // looks through the original videos and fills the scene list (recommended scenes come pre-chosen)
 async function findHighlights() {
@@ -461,7 +440,7 @@ $('#autoBtn').addEventListener('click', async () => {
   arrange(cands.filter((k) => k.on));
   hlSay(`추천 장면 ${clips.length}개를 이어 붙여 영상을 만들고 있어요. 다 되면 4번에 나와요. 장면·순서·글자는 아래에서 바꾸고 다시 만들 수 있어요.`);
   await make(false);
-  hlSay($('#result').hidden ? '영상을 만들지 못했어요. 4번의 안내를 확인해 주세요.'
+  hlSay($('#saveRow').hidden ? '영상을 만들지 못했어요. 4번의 안내를 확인해 주세요.'
     : `완성! 추천 장면 ${clips.length}개로 만든 영상이 4번에 있어요. 장면·순서·글자를 바꾸고 다시 만들 수도 있어요.`);
 });
 
@@ -532,11 +511,11 @@ $('#hlSave').addEventListener('click', async () => {
       const blob = new Blob([data.buffer], { type: 'video/mp4' }), url = URL.createObjectURL(blob);
       hlUrls.push(url);
       files.push(new File([blob], fname, { type: 'video/mp4' }));
-      box.append(Object.assign(document.createElement('a'), { href: url, download: fname, className: 'big',
+      box.append(Object.assign(document.createElement('a'), { href: url, download: fname, className: 'btn',
         textContent: `⬇ ${n + 1}. ${k.i + 1}번 영상 ${k.start.toFixed(1)}~${k.end.toFixed(1)}초 저장` }));
     }
     if (navigator.canShare?.({ files })) {
-      const b = Object.assign(document.createElement('button'), { className: 'big primary', textContent: '📤 모두 공유 / 사진첩에 저장' });
+      const b = Object.assign(document.createElement('button'), { className: 'btn cta', textContent: '📤 모두 공유 / 사진첩에 저장' });
       b.onclick = () => navigator.share({ files }).catch(() => {});
       box.prepend(b);
     }
@@ -631,7 +610,8 @@ $('#seqPlay').addEventListener('click', async () => {
   if (!list.length) return;
   const run = (seqRun = { stop: false, at: 0, c: list[0], v: null });
   $('#seqPlay').textContent = '■ 멈추기';
-  const stage = $('#seqStage'), veil = stage.querySelector('.veil'), txt = stage.querySelector('.txt');
+  setView('seq');
+  const stage = $('#seqStage'), veil = stage.querySelector('.veil');
   let [cur, nxt] = stage.querySelectorAll('video');
   let au = stage.querySelector('audio');
   if (opt.music) {
@@ -639,7 +619,6 @@ $('#seqPlay').addEventListener('click', async () => {
     if (!au) au = stage.appendChild(document.createElement('audio'));
     au.src = musicUrl; au.volume = Math.min(1, opt.vol / 100); au.currentTime = 0;
   }
-  const showText = (c) => { const p = c.el.querySelector('.txt'); txt.hidden = p.hidden; if (!p.hidden) txt.src = p.src; };
   run.tick = setInterval(() => { if (run.v) { nowT = run.at + run.v.currentTime - run.c.start; showPos(); paintLayers(); } }, 50);
   await prep(cur, list[0]);
   if (run.stop) return;
@@ -649,7 +628,6 @@ $('#seqPlay').addEventListener('click', async () => {
   for (let i = 0; i < list.length && !run.stop; i++) {
     const c = list[i], n = list[i + 1];
     Object.assign(run, { c, v: cur, at: tl.list[i].at });
-    showText(c);
     const ready = n ? prep(nxt, n) : null; // load the next clip while this one plays
     const d = n && c.trans !== 'cut' ? Math.min(+opt.trSec, (c.end - c.start) / 2, (n.end - n.start) / 2) : 0;
     await until(run, () => cur.currentTime >= c.end - d || cur.ended);
@@ -657,7 +635,6 @@ $('#seqPlay').addEventListener('click', async () => {
     await ready;
     if (run.stop) break;
     playSafe(nxt);
-    if (d) setTimeout(() => showText(n), (d * 1000) / 2);
     await act(c.trans, cur, nxt, veil, d * 1000);
     cur.pause();
     [cur, nxt] = [nxt, cur];
@@ -688,12 +665,12 @@ function timeline() {
   return { list: out, total: t };
 }
 async function layerCanvas(o, W, H, cv = document.createElement('canvas')) {
-  const T = TPL[o.tpl];
-  await document.fonts.load(`40px ${T.font}`).catch(() => {});
+  const T = TPL[o.tpl], font = o.font || T.font;
+  await document.fonts.load(`40px ${font}`).catch(() => {});
   cv.width = W; cv.height = H;
   const g = cv.getContext('2d');
-  const px = Math.round(Math.min(W, H) * o.size * (T.font === 'PEN' ? 1.3 : 1));
-  g.font = `${px}px ${T.font}, sans-serif`;
+  const px = Math.round(Math.min(W, H) * o.size * (font === 'PEN' ? 1.3 : 1)); // pen script draws small
+  g.font = `${px}px ${font}, sans-serif`;
   g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
   const lines = wrap(g, o.text.trim(), W * 0.9), lh = px * 1.25;
   const cx = o.x * W, cy = o.y * H, y0 = cy - ((lines.length - 1) * lh) / 2;
@@ -706,7 +683,7 @@ async function layerCanvas(o, W, H, cv = document.createElement('canvas')) {
   lines.forEach((l, i) => {
     const y = y0 + i * lh;
     if (T.stroke) { g.lineWidth = px * 0.18; g.strokeStyle = T.stroke; g.strokeText(l, cx, y); }
-    g.fillStyle = T.fill; g.fillText(l, cx, y);
+    g.fillStyle = o.fill || T.fill; g.fillText(l, cx, y);
   });
   return cv;
 }
@@ -765,6 +742,7 @@ function selectText(o) {
     $('#lyText').value = o.text; $('#lyTpl').value = o.tpl;
     $('#lySize').value = Math.round(o.size * 100); $('#lySizeV').textContent = Math.round(o.size * 100);
     $('#lyT0').value = o.t0.toFixed(1); $('#lyT1').value = o.t1.toFixed(1);
+    paintPicks(o);
   }
   renderLayerList();
   paintLayers();
@@ -776,7 +754,18 @@ function setTimes(o, t0, t1) {
   renderLayerList(); paintLayers();
 }
 $('#lyText').addEventListener('input', (e) => { curT.text = e.target.value; paintLayer(curT); renderLayerList(); });
-$('#lyTpl').addEventListener('change', (e) => { curT.tpl = e.target.value; paintLayer(curT); renderLayerList(); });
+$('#lyTpl').addEventListener('change', (e) => { curT.tpl = e.target.value; curT.font = curT.fill = null; paintPicks(curT); paintLayer(curT); renderLayerList(); });
+const FONTS = { BHS: '굵게', DOH: '깔끔', JUA: '귀엽게', PEN: '손글씨' };
+const COLORS = ['#ffffff', '#ffe14d', '#ff5a5f', '#4dd2ff', '#7cfc8a', '#111111'];
+$('#lyFont').innerHTML = Object.entries(FONTS).map(([k, n]) => `<button data-f="${k}" style="font-family:${k}">${n}</button>`).join('');
+$('#lyColor').innerHTML = COLORS.map((c) => `<button data-c="${c}" style="background:${c}" aria-label="색 ${c}"></button>`).join('');
+function paintPicks(o) {
+  const T = TPL[o.tpl];
+  $('#lyFont').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.f === (o.font || T.font)));
+  $('#lyColor').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.c === (o.fill || T.fill)));
+}
+$('#lyFont').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b || !curT) return; curT.font = b.dataset.f; paintPicks(curT); paintLayer(curT); });
+$('#lyColor').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b || !curT) return; curT.fill = b.dataset.c; paintPicks(curT); paintLayer(curT); });
 $('#lySize').addEventListener('input', (e) => { curT.size = +e.target.value / 100; $('#lySizeV').textContent = e.target.value; paintLayer(curT); });
 $('#lyT0').addEventListener('change', (e) => setTimes(curT, +e.target.value, curT.t1));
 $('#lyT1').addEventListener('change', (e) => setTimes(curT, curT.t0, +e.target.value));
@@ -813,8 +802,8 @@ async function make(sample) {
   const list = clips.filter((c) => c.dur > 0);
   if (!list.length) { alert('먼저 1번에서 영상을 골라 주세요.'); return; }
   lock(true);
-  $('#prog').hidden = false; $('#result').hidden = true; bar(0);
-  if (sample) $('#prog').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  $('#prog').hidden = false; $('#saveRow').hidden = true; bar(0);
+  $('#prog').scrollIntoView({ behavior: 'smooth', block: 'center' });
   const [W, H] = dims(sample ? '720' : opt.q);
   const keepOrig = opt.keepOrig === '1';
   const t0 = Date.now();
@@ -830,11 +819,6 @@ async function make(sample) {
         const it = { path: `${dir}/${names[i]}`, start: c.start, dur: c.end - c.start, hasAudio: false, trans: c.trans };
         if (keepOrig) it.hasAudio = c.ana ? c.ana.hasAudio : (await probe(ff, it.path)).hasAudio;
         if (keepOrig && c.fix) it.dips = spotsInRange(c).map((s) => ({ t0: Math.max(0, s.t0 - c.start), t1: Math.min(it.dur, s.t1 - c.start), gain: s.gain }));
-        if (c.text.trim()) {
-          const blob = await new Promise((r) => textCanvas(c.text, W, H).then((cv) => cv.toBlob(r, 'image/png')));
-          it.textPath = `t${i}.png`;
-          await ff.writeFile(it.textPath, new Uint8Array(await blob.arrayBuffer()));
-        }
         items.push(it);
       }
       const overlays = [];
@@ -891,8 +875,9 @@ function showResult(blob, secs, sample) {
   share.onclick = () => navigator.share({ files: [file] }).catch(() => {});
   bar(1);
   say(`${sample ? '샘플(720p) ' : ''}완성! (${(blob.size / 1048576).toFixed(1)} MB, ${Math.round(secs)}초 걸림)`);
-  $('#result').hidden = false;
-  $('#result').scrollIntoView({ behavior: 'smooth' });
+  $('#saveRow').hidden = false;
+  setView('result');
+  $('#seq').scrollIntoView({ behavior: 'smooth' });
 }
 
 /* ---------- visitor / video counters ----------
@@ -932,3 +917,38 @@ $('#fbSend').addEventListener('click', async () => {
   } catch { $('#fbMsg').textContent = '인터넷 연결을 확인하고 다시 눌러 주세요.'; }
   $('#fbSend').disabled = false;
 });
+
+/* ---------- one viewer: whole preview, the clip being cut, or the finished video ---------- */
+let tab = 'add', view = 'seq';
+function setView(v) {
+  view = v;
+  const has = clips.length > 0;
+  if (v !== 'seq') stopSeq();
+  if (v !== 'result') $('#outVideo').pause();
+  if (v !== 'clip') $('#clipSlot').querySelectorAll('video').forEach((x) => x.pause());
+  else if (sel.frame.parentNode !== $('#clipSlot')) $('#clipSlot').replaceChildren(sel.frame);
+  $('#seqStage').hidden = v !== 'seq';
+  $('#clipSlot').hidden = v !== 'clip';
+  $('#result').hidden = v !== 'result';
+  $('#empty').hidden = has || v === 'result';
+  $('#timebar').hidden = v !== 'seq' || !has;
+  $('#seqPlay').hidden = v === 'result';
+  $('#backEdit').hidden = v !== 'result';
+  $('#viewName').textContent = v === 'result' ? '✨ 완성된 영상' : v === 'clip' ? `✂️ ${clips.indexOf(sel) + 1}번 영상 자르기` : '👀 미리보기';
+}
+const refreshView = () => setView(view === 'result' ? 'result' : tab === 'cut' && sel ? 'clip' : 'seq');
+function goTab(t) {
+  if (tab === 'text' && t !== 'text') selectText(null); // a tap on the preview should not move text from another step
+  tab = t;
+  document.querySelectorAll('.tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === t));
+  document.querySelectorAll('.pane').forEach((p) => (p.hidden = p.dataset.pane !== t));
+  view = 'seq';
+  refreshView();
+}
+$('.tabs').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b && !busy) goTab(b.dataset.tab); });
+document.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => {
+  goTab(b.dataset.go);
+  $('.tabs').scrollIntoView({ behavior: 'smooth' });
+}));
+$('#backEdit').addEventListener('click', () => { view = 'seq'; refreshView(); });
+refreshView();
