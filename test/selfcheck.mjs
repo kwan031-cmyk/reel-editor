@@ -86,4 +86,17 @@ for (const c of cases) {
   assert.ok(Math.abs(Number(p.format.duration) - total) < 0.3, `${c.name}: duration ${p.format.duration} vs ${total}`);
   console.log('OK', c.name, p.format.duration);
 }
+// timed text: shows only inside its window (frame differs from the same render without it at 1.0s, matches at 2.6s)
+{
+  const clips = base.map((b) => ({ ...b, textPath: undefined, trans: 'cut' }));
+  const mk = (out, overlays) => run('ffmpeg', buildArgs({ clips, overlays, music: null, keepOrig: false, fit: 'cover', W: 360, H: 640, out }).args);
+  mk('plain.mp4', []);
+  mk('timed.mp4', [{ path: 't.png', t0: 0.5, t1: 2 }, { path: 't.png', t0: 3.5, t1: 4 }]);
+  const px = (file, t) => execFileSync('ffmpeg', ['-v', 'error', '-ss', String(t), '-i', file, '-frames:v', '1', '-vf', 'scale=1:1', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'], { cwd: dir });
+  const diff = (t) => { const a = px('plain.mp4', t), b = px('timed.mp4', t); return Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]); };
+  assert.ok(diff(1) > 30, `overlay visible at 1s (${diff(1)})`);
+  assert.ok(diff(2.6) < 8, `overlay gone at 2.6s (${diff(2.6)})`);
+  assert.ok(diff(3.7) > 30, `second overlay visible at 3.7s (${diff(3.7)})`);
+  console.log('OK timed text');
+}
 console.log('all passed');

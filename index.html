@@ -36,7 +36,9 @@
         <button data-v="30">30초</button>
         <button data-v="60">60초</button>
       </div>
-      <button class="big primary" id="hlBtn">✨ 하이라이트 찾기</button>
+      <button class="big primary" id="autoBtn">🪄 자동으로 뚝딱 만들기</button>
+      <p class="hint">영상 여러 개를 담고 누르기만 하면 하이라이트를 골라 부드럽게 이어 붙여 mp4까지 혼자 만들어요. 직접 고르고 싶으면 아래 버튼을 누르세요.</p>
+      <button class="big" id="hlBtn">✨ 하이라이트 찾기 (직접 고르기)</button>
       <p id="hlMsg" class="hint" hidden></p>
       <div id="cands" class="cands" hidden></div>
       <p id="candInfo" class="total" hidden></p>
@@ -53,6 +55,27 @@
       <div class="stage" id="seqStage"><video playsinline preload="auto"></video><video playsinline preload="auto"></video><div class="veil"></div><img class="txt" alt="" hidden></div>
       <button class="big" id="seqPlay">▶ 처음부터 이어서 보기 (트랜지션 포함)</button>
       <p class="hint">만들기 전에 바로 보는 미리보기예요. 트랜지션은 실제 영상과 거의 같게 보여요.</p>
+      <label class="vol">미리보기 위치 <input type="range" id="seqPos" min="0" max="0" step="0.1" value="0"> <b id="seqPosV">0.0초</b></label>
+      <div class="lyr">
+        <b>🔤 글자 템플릿</b>
+        <p class="hint">템플릿을 누르면 지금 미리보기 위치에 글자가 생겨요. 위 화면을 <b>누르거나 끌어서</b> 위치를 옮기고, 크기와 나오는 시간을 정하세요.</p>
+        <div id="tplRow" class="tplrow"></div>
+        <div id="layerList" class="layerlist"></div>
+        <div id="layerEd" hidden>
+          <textarea id="lyText" rows="2" placeholder="넣을 글자"></textarea>
+          <label class="vol">모양 <select id="lyTpl"></select></label>
+          <label class="vol">크기 <input type="range" id="lySize" min="3" max="20" step="0.5"> <b id="lySizeV"></b></label>
+          <label class="vol">나오는 시간 <input type="number" id="lyT0" min="0" step="0.1" inputmode="decimal" aria-label="시작 초"> ~ <input type="number" id="lyT1" min="0" step="0.1" inputmode="decimal" aria-label="끝 초"> 초</label>
+          <div class="btns">
+            <button id="lyFrom">⏵ 지금 위치부터</button>
+            <button id="lyTo">⏹ 지금 위치까지</button>
+          </div>
+          <div class="btns">
+            <button id="lyDone">✔ 다 됐어요</button>
+            <button id="lyDel" class="del">글자 삭제</button>
+          </div>
+        </div>
+      </div>
     </div>
     <div id="list"></div>
     <p class="total" id="total"></p>

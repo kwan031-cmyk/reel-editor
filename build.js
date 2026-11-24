@@ -2,9 +2,10 @@
 // transitions, then optional music.
 // clips: [{ path, start, dur, hasAudio, textPath?, trans? (to next clip, xfade name or 'cut'), dips?: [{t0,t1,gain}] }]
 // music: { path, vol? (1 = original loudness) } | null
+// overlays: [{ path (full-frame transparent png), t0, t1 }] shown on the joined video between t0 and t1 seconds
 export const TRANS_SEC = 0.4;
 
-export function buildArgs({ clips, music, keepOrig, fit, W, H, out = 'out.mp4', trSec = TRANS_SEC }) {
+export function buildArgs({ clips, overlays = [], music, keepOrig, fit, W, H, out = 'out.mp4', trSec = TRANS_SEC }) {
   const a = ['-hide_banner'], f = [];
   let n = 0;
   const AF = 'aresample=44100,aformat=sample_fmts=fltp:channel_layouts=stereo';
@@ -50,6 +51,12 @@ export function buildArgs({ clips, music, keepOrig, fit, W, H, out = 'out.mp4', 
     vc = `[vj${i}]`;
     if (ac) ac = `[aj${i}]`;
   }
+
+  overlays.forEach((o, k) => {
+    a.push('-i', o.path);
+    f.push(`${vc}[${n++}:v]overlay=0:0:enable='between(t,${o.t0.toFixed(2)},${o.t1.toFixed(2)})'[vo${k}]`);
+    vc = `[vo${k}]`;
+  });
 
   let aout = ac;
   if (music) {

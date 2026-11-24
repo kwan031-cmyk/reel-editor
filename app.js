@@ -346,6 +346,7 @@ $('#strip').addEventListener('keydown', (e) => {
 });
 function renderTotal() {
   const t = clips.reduce((s, c, i) => s + (c.end - c.start) - (i < clips.length - 1 && c.trans !== 'cut' ? +opt.trSec : 0), 0);
+  $('#seqPos').max = timeline().total.toFixed(1);
   $('#total').textContent = clips.length ? `전체 길이: ${sec(t)}${t > 90 ? ' — 릴스는 90초까지라 조금 줄이는 게 좋아요' : ''}` : '';
 }
 
@@ -358,6 +359,7 @@ document.querySelectorAll('.seg').forEach((seg) => seg.addEventListener('click',
   document.body.classList.toggle('contain', opt.fit === 'contain');
   document.body.classList.toggle('wide', opt.ratio === '16:9');
   if (['pos', 'size', 'font', 'ratio'].includes(seg.dataset.k)) clips.forEach(drawPreview);
+  if (seg.dataset.k === 'ratio') texts.forEach(paintLayer);
   if (seg.dataset.k === 'trSec') { $('#trSecIn').value = opt.trSec; renderTotal(); }
 }));
 $('#trSecIn').addEventListener('change', (e) => {
@@ -423,24 +425,44 @@ async function drawPreview(c) {
 /* ---------- highlights: look through every clip, keep the liveliest parts, make a quick sample ---------- */
 const hlSay = (m) => { $('#hlMsg').hidden = false; $('#hlMsg').textContent = m; };
 let cands = [], hlSrc = []; // candidate scenes and the original clips they come from
-$('#hlBtn').addEventListener('click', async () => {
+// looks through the original videos and fills the scene list (recommended scenes come pre-chosen)
+async function findHighlights() {
   const src = (backup || clips).filter((c) => c.dur > 0); // always search the original videos
-  if (!src.length) { alert('먼저 1번에서 영상을 골라 주세요.'); return; }
+  if (!src.length) { alert('먼저 1번에서 영상을 골라 주세요.'); return false; }
+  await engine(hlSay);
+  for (const [k, c] of src.entries())
+    await analyze(c, (p) => hlSay(`영상 살펴보는 중… ${k + 1}/${src.length}번 (${Math.round(p * 100)}%)`));
+  const sc = scores(src.map((c) => c.ana));
+  const items = src.map((c, i) => ({ dur: c.dur, score: sc[i] }));
+  const target = +opt.hlLen;
+  hlSrc = src;
+  renderCands(candidates(items, segLenFor(target, src.length), 5).sort((a, b) => a.i - b.i || a.start - b.start),
+    pickHighlights(items, target));
+  return true;
+}
+$('#hlBtn').addEventListener('click', async () => {
+  if (busy) return;
   lock(true);
   try {
-    await engine(hlSay);
-    for (const [k, c] of src.entries())
-      await analyze(c, (p) => hlSay(`영상 살펴보는 중… ${k + 1}/${src.length}번 (${Math.round(p * 100)}%)`));
-    const sc = scores(src.map((c) => c.ana));
-    const items = src.map((c, i) => ({ dur: c.dur, score: sc[i] }));
-    const target = +opt.hlLen;
-    hlSrc = src;
-    renderCands(candidates(items, segLenFor(target, src.length), 5).sort((a, b) => a.i - b.i || a.start - b.start),
-      pickHighlights(items, target));
-    hlSay(`장면 ${cands.length}개를 찾았어요. 장면을 누르면 미리 볼 수 있어요. 쓸 장면을 고르고 "배치해서 이어보기"를 누르세요. (★가 많을수록 움직임·소리가 커요)`);
+    if (await findHighlights())
+      hlSay(`장면 ${cands.length}개를 찾았어요. 장면을 누르면 미리 볼 수 있어요. 쓸 장면을 고르고 "배치해서 이어보기"를 누르세요. (★가 많을수록 움직임·소리가 커요)`);
   } catch (err) {
     console.error(err); resetEngine(); hlSay('영상을 살펴보지 못했어요. 다시 눌러 주세요.');
   } finally { lock(false); }
+});
+// one tap: find highlights -> arrange the recommended scenes with soft transitions -> make the final mp4
+$('#autoBtn').addEventListener('click', async () => {
+  if (busy) return;
+  lock(true);
+  let ok = false;
+  try { ok = await findHighlights(); } catch (err) { console.error(err); resetEngine(); hlSay('영상을 살펴보지 못했어요. 다시 눌러 주세요.'); }
+  finally { lock(false); }
+  if (!ok) return;
+  arrange(cands.filter((k) => k.on));
+  hlSay(`추천 장면 ${clips.length}개를 이어 붙여 영상을 만들고 있어요. 다 되면 4번에 나와요. 장면·순서·글자는 아래에서 바꾸고 다시 만들 수 있어요.`);
+  await make(false);
+  hlSay($('#result').hidden ? '영상을 만들지 못했어요. 4번의 안내를 확인해 주세요.'
+    : `완성! 추천 장면 ${clips.length}개로 만든 영상이 4번에 있어요. 장면·순서·글자를 바꾸고 다시 만들 수도 있어요.`);
 });
 
 const paintCand = (k) => { k.el.classList.toggle('on', k.on); k.el.querySelector('.pick').textContent = k.on ? '✔ 쓸 거예요' : '＋ 고르기'; };
@@ -524,10 +546,8 @@ $('#hlSave').addEventListener('click', async () => {
     hlSay('장면 클립을 만들지 못했어요. 3번에서 "빠르게 720p"를 고르고 다시 해 보세요.');
   } finally { lock(false); }
 });
-$('#hlMake').addEventListener('click', async () => {
-  const on = cands.filter((k) => k.on).sort((a, b) => a.i - b.i || a.start - b.start);
-  if (!on.length) { alert('샘플에 쓸 장면을 하나 이상 골라 주세요.'); return; }
-  if (busy) return;
+function arrange(on) {
+  on = [...on].sort((a, b) => a.i - b.i || a.start - b.start);
   if (backup) dropClips(clips, true); // replacing an earlier sample list
   else { backup = clips; dropClips(clips, false); } // keep the originals for "되돌리기"
   clips = on.map((k) => { const o = hlSrc[k.i]; return newClip(o.file, { dur: o.dur, start: k.start, end: k.end, trans: 'fade', ana: o.ana }); });
@@ -535,6 +555,12 @@ $('#hlMake').addEventListener('click', async () => {
   renderList();
   $('#hlUndo').hidden = false;
   $('#hlSample').hidden = false;
+}
+$('#hlMake').addEventListener('click', async () => {
+  const on = cands.filter((k) => k.on);
+  if (!on.length) { alert('샘플에 쓸 장면을 하나 이상 골라 주세요.'); return; }
+  if (busy) return;
+  arrange(on);
   hlSay('고른 장면을 아래에 배치했어요. 이어서 보기로 확인하고, 마음에 들면 "샘플 저장"을 누르세요. 순서·트랜지션은 아래에서 바꿀 수 있어요.');
   stopSeq();
   $('#seq').scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -592,16 +618,18 @@ function act(t, a, b, veil, ms) {
 function stopSeq() {
   if (!seqRun) return;
   seqRun.stop = true;
+  clearInterval(seqRun.tick);
   seqRun = null;
+  paintLayers();
   $('#seqStage').querySelectorAll('video').forEach((v) => v.pause());
   $('#seqStage').querySelector('audio')?.pause();
   $('#seqPlay').textContent = '▶ 처음부터 이어서 보기 (트랜지션 포함)';
 }
 $('#seqPlay').addEventListener('click', async () => {
   if (seqRun) return stopSeq();
-  const list = clips.filter((c) => c.dur > 0);
+  const tl = timeline(), list = tl.list.map((x) => x.c);
   if (!list.length) return;
-  const run = (seqRun = { stop: false });
+  const run = (seqRun = { stop: false, at: 0, c: list[0], v: null });
   $('#seqPlay').textContent = '■ 멈추기';
   const stage = $('#seqStage'), veil = stage.querySelector('.veil'), txt = stage.querySelector('.txt');
   let [cur, nxt] = stage.querySelectorAll('video');
@@ -612,6 +640,7 @@ $('#seqPlay').addEventListener('click', async () => {
     au.src = musicUrl; au.volume = Math.min(1, opt.vol / 100); au.currentTime = 0;
   }
   const showText = (c) => { const p = c.el.querySelector('.txt'); txt.hidden = p.hidden; if (!p.hidden) txt.src = p.src; };
+  run.tick = setInterval(() => { if (run.v) { nowT = run.at + run.v.currentTime - run.c.start; showPos(); paintLayers(); } }, 50);
   await prep(cur, list[0]);
   if (run.stop) return;
   cur.style.opacity = 1;
@@ -619,6 +648,7 @@ $('#seqPlay').addEventListener('click', async () => {
   if (opt.music) playSafe(au);
   for (let i = 0; i < list.length && !run.stop; i++) {
     const c = list[i], n = list[i + 1];
+    Object.assign(run, { c, v: cur, at: tl.list[i].at });
     showText(c);
     const ready = n ? prep(nxt, n) : null; // load the next clip while this one plays
     const d = n && c.trans !== 'cut' ? Math.min(+opt.trSec, (c.end - c.start) / 2, (n.end - n.start) / 2) : 0;
@@ -634,6 +664,145 @@ $('#seqPlay').addEventListener('click', async () => {
   }
   if (seqRun === run) stopSeq();
 });
+
+/* ---------- text templates on the preview player: tap/drag to place, size slider, show time on the whole video ---------- */
+// x, y = centre of the text as a share of the frame; size = letter height as a share of the short side
+const TPL = {
+  title: { name: '큰 제목', font: 'BHS', size: 0.11, y: 0.2, fill: '#fff', stroke: 'rgba(0,0,0,.85)', sample: '제목을 적어요' },
+  sub: { name: '자막', font: 'DOH', size: 0.06, y: 0.72, fill: '#fff', box: 'rgba(0,0,0,.6)', sample: '자막을 적어요' },
+  hl: { name: '강조', font: 'BHS', size: 0.09, y: 0.5, fill: '#ffe14d', stroke: '#000', sample: '여기 주목!' },
+  tag: { name: '라벨', font: 'JUA', size: 0.06, y: 0.12, fill: '#111', box: '#ffcc00', sample: '오늘의 추천' },
+  pen: { name: '손글씨', font: 'PEN', size: 0.1, y: 0.6, fill: '#fff', shadow: true, sample: '손글씨 메모' },
+};
+let texts = [], curT = null, nowT = 0; // text layers, the one being edited, preview time on the whole video
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+// where each clip starts on the joined video (same maths as build.js)
+function timeline() {
+  const list = clips.filter((c) => c.dur > 0);
+  let t = 0;
+  const out = list.map((c, i) => {
+    const at = t, n = list[i + 1];
+    t += c.end - c.start - (n && c.trans !== 'cut' ? Math.min(+opt.trSec, (c.end - c.start) / 2, (n.end - n.start) / 2) : 0);
+    return { c, at };
+  });
+  return { list: out, total: t };
+}
+async function layerCanvas(o, W, H, cv = document.createElement('canvas')) {
+  const T = TPL[o.tpl];
+  await document.fonts.load(`40px ${T.font}`).catch(() => {});
+  cv.width = W; cv.height = H;
+  const g = cv.getContext('2d');
+  const px = Math.round(Math.min(W, H) * o.size * (T.font === 'PEN' ? 1.3 : 1));
+  g.font = `${px}px ${T.font}, sans-serif`;
+  g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
+  const lines = wrap(g, o.text.trim(), W * 0.9), lh = px * 1.25;
+  const cx = o.x * W, cy = o.y * H, y0 = cy - ((lines.length - 1) * lh) / 2;
+  if (T.box) {
+    const w = Math.max(...lines.map((l) => g.measureText(l).width)) + px * 0.8, h = lines.length * lh + px * 0.3;
+    g.fillStyle = T.box;
+    g.beginPath(); g.roundRect(cx - w / 2, cy - h / 2, w, h, px * 0.3); g.fill();
+  }
+  if (T.shadow) { g.shadowColor = 'rgba(0,0,0,.85)'; g.shadowBlur = px * 0.25; }
+  lines.forEach((l, i) => {
+    const y = y0 + i * lh;
+    if (T.stroke) { g.lineWidth = px * 0.18; g.strokeStyle = T.stroke; g.strokeText(l, cx, y); }
+    g.fillStyle = T.fill; g.fillText(l, cx, y);
+  });
+  return cv;
+}
+const paintLayer = (o) => layerCanvas(o, ...dims('720'), o.cv).then(paintLayers);
+// while playing: only texts whose time has come; while stopped: also the one being edited
+function paintLayers() {
+  texts.forEach((o) => { o.cv.hidden = !o.text.trim() || !((!seqRun && o === curT) || (nowT >= o.t0 && nowT < o.t1)); });
+}
+const showPos = () => { $('#seqPos').value = nowT; $('#seqPosV').textContent = sec(nowT); };
+// shows the frame at time t of the joined video in the preview player
+async function showAt(t) {
+  const { list, total } = timeline();
+  if (!list.length) return;
+  nowT = clamp(t, 0, total);
+  showPos(); paintLayers();
+  const e = list.findLast((x) => x.at <= nowT + 1e-6) || list[0];
+  const [v, v2] = $('#seqStage').querySelectorAll('video');
+  v2.style.opacity = 0;
+  await prep(v, e.c);
+  v.currentTime = Math.min(e.c.end, e.c.start + nowT - e.at);
+  v.style.opacity = 1;
+}
+$('#seqPos').addEventListener('input', (e) => { stopSeq(); showAt(+e.target.value); });
+
+$('#tplRow').innerHTML = Object.entries(TPL).map(([k, t]) => `<button data-tpl="${k}" style="font-family:${t.font}">${t.name}</button>`).join('');
+$('#lyTpl').innerHTML = Object.entries(TPL).map(([k, t]) => `<option value="${k}">${t.name}</option>`).join('');
+$('#tplRow').addEventListener('click', (e) => {
+  const b = e.target.closest('button');
+  if (!b || busy) return;
+  const T = TPL[b.dataset.tpl], { total } = timeline();
+  const t0 = +clamp(nowT, 0, Math.max(0, total - 1)).toFixed(1);
+  const o = { text: T.sample, tpl: b.dataset.tpl, x: 0.5, y: T.y, size: T.size, t0, t1: +Math.min(total, t0 + 3).toFixed(1), cv: document.createElement('canvas') };
+  if (o.t1 <= o.t0) o.t1 = o.t0 + 3; // no clips measured yet
+  o.cv.className = 'ly';
+  $('#seqStage').append(o.cv);
+  texts.push(o);
+  selectText(o);
+  paintLayer(o);
+  $('#lyText').select();
+});
+function renderLayerList() {
+  const box = $('#layerList');
+  box.innerHTML = '';
+  for (const o of texts) {
+    const b = Object.assign(document.createElement('button'), { type: 'button', className: o === curT ? 'on' : '',
+      textContent: `${TPL[o.tpl].name} · ${o.text.trim().slice(0, 12) || '(빈 글자)'} · ${o.t0.toFixed(1)}~${o.t1.toFixed(1)}초` });
+    b.onclick = () => { if (!busy) { selectText(o); stopSeq(); showAt(o.t0); } };
+    box.append(b);
+  }
+}
+function selectText(o) {
+  curT = o;
+  $('#layerEd').hidden = !o;
+  $('#seqStage').classList.toggle('edit', !!o);
+  if (o) {
+    $('#lyText').value = o.text; $('#lyTpl').value = o.tpl;
+    $('#lySize').value = Math.round(o.size * 100); $('#lySizeV').textContent = Math.round(o.size * 100);
+    $('#lyT0').value = o.t0.toFixed(1); $('#lyT1').value = o.t1.toFixed(1);
+  }
+  renderLayerList();
+  paintLayers();
+}
+function setTimes(o, t0, t1) {
+  o.t0 = +Math.max(0, t0 || 0).toFixed(1);
+  o.t1 = +Math.max(o.t0 + 0.3, t1 || 0).toFixed(1);
+  $('#lyT0').value = o.t0.toFixed(1); $('#lyT1').value = o.t1.toFixed(1);
+  renderLayerList(); paintLayers();
+}
+$('#lyText').addEventListener('input', (e) => { curT.text = e.target.value; paintLayer(curT); renderLayerList(); });
+$('#lyTpl').addEventListener('change', (e) => { curT.tpl = e.target.value; paintLayer(curT); renderLayerList(); });
+$('#lySize').addEventListener('input', (e) => { curT.size = +e.target.value / 100; $('#lySizeV').textContent = e.target.value; paintLayer(curT); });
+$('#lyT0').addEventListener('change', (e) => setTimes(curT, +e.target.value, curT.t1));
+$('#lyT1').addEventListener('change', (e) => setTimes(curT, curT.t0, +e.target.value));
+$('#lyFrom').addEventListener('click', () => setTimes(curT, nowT, Math.max(curT.t1, nowT + 0.3)));
+$('#lyTo').addEventListener('click', () => setTimes(curT, Math.min(curT.t0, nowT - 0.3), nowT));
+$('#lyDel').addEventListener('click', () => { curT.cv.remove(); texts.splice(texts.indexOf(curT), 1); selectText(null); });
+$('#lyDone').addEventListener('click', () => selectText(null));
+// tap or drag on the preview moves the text being edited there
+{
+  const stage = $('#seqStage');
+  stage.addEventListener('pointerdown', (e) => {
+    if (!curT || busy || e.button > 0) return;
+    e.preventDefault();
+    stage.setPointerCapture(e.pointerId);
+    const o = curT;
+    const mv = (ev) => {
+      const r = stage.getBoundingClientRect();
+      o.x = clamp((ev.clientX - r.left) / r.width, 0.05, 0.95);
+      o.y = clamp((ev.clientY - r.top) / r.height, 0.05, 0.95);
+      paintLayer(o);
+    };
+    mv(e);
+    stage.onpointermove = mv;
+    stage.onpointerup = stage.onpointercancel = () => { stage.onpointermove = null; };
+  });
+}
 
 /* ---------- step 4: make the mp4 ---------- */
 const say = (m) => { $('#progMsg').textContent = m; };
@@ -668,8 +837,16 @@ async function make(sample) {
         }
         items.push(it);
       }
+      const overlays = [];
+      for (const [k, o] of texts.entries()) {
+        if (!o.text.trim() || o.t1 <= o.t0) continue;
+        const cv = await layerCanvas(o, W, H);
+        const blob = await new Promise((r) => cv.toBlob(r, 'image/png'));
+        overlays.push({ path: `ly${k}.png`, t0: o.t0, t1: o.t1 });
+        await ff.writeFile(`ly${k}.png`, new Uint8Array(await blob.arrayBuffer()));
+      }
       const music = opt.music ? { path: `${dir}/music${ext(opt.music.name)}`, vol: opt.vol / 100 } : null;
-      const { args, total } = buildArgs({ clips: items, music, keepOrig, fit: opt.fit, W, H, trSec: +opt.trSec });
+      const { args, total } = buildArgs({ clips: items, overlays, music, keepOrig, fit: opt.fit, W, H, trSec: +opt.trSec });
       onLog = (m) => {
         const t = secOf(m);
         if (t == null) return;
@@ -683,6 +860,7 @@ async function make(sample) {
       if (code !== 0) throw new Error(logs.slice(from).slice(-8).join('\n'));
       const out = await ff.readFile('out.mp4');
       for (const it of items) if (it.textPath) await ff.deleteFile(it.textPath).catch(() => {});
+      for (const o of overlays) await ff.deleteFile(o.path).catch(() => {});
       await ff.deleteFile('out.mp4').catch(() => {});
       return out;
     });
