@@ -712,7 +712,6 @@ function syncCtl() {
   const m = media(), playing = m ? !m.paused && !m.ended : !!seqRun;
   const total = m ? (isFinite(m.duration) ? m.duration : 0) : timeline().total, at = m ? m.currentTime : nowT;
   const b = $('#cPlay');
-  b.textContent = playing ? '⏸' : '▶';
   b.ariaLabel = playing ? '멈추기' : '재생';
   b.classList.toggle('on', playing);
   $('#seqPos').max = total.toFixed(2);
@@ -994,10 +993,9 @@ function goTab(t) {
   view = 'seq';
   refreshView();
 }
-$('.tabs').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b && !busy) goTab(b.dataset.tab); });
-document.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => {
-  goTab(b.dataset.go);
-  $('.tabs').scrollIntoView({ behavior: 'smooth' });
-}));
+// bring the step into view when its top is off screen or hidden low behind the phone tab bar
+const toPanel = () => { const t = $('.panel').getBoundingClientRect().top; if (t < 0 || t > innerHeight * 0.6) $('.panel').scrollIntoView({ behavior: 'smooth' }); };
+$('.tabs').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b && !busy) { goTab(b.dataset.tab); toPanel(); } });
+document.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => { goTab(b.dataset.go); toPanel(); }));
 $('#backEdit').addEventListener('click', () => { view = 'seq'; refreshView(); });
 refreshView();
