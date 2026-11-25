@@ -79,6 +79,7 @@ const T = [
   ['깔끔', 'Clean', 'すっきり', '简洁', 'Limpia'],
   ['귀엽게', 'Cute', 'かわいく', '可爱', 'Divertida'],
   ['움직임', 'Motion', '動き', '动效', 'Movimiento'],
+  ['↻ 다시 보기', '↻ Replay', '↻ もう一度見る', '↻ 再看一次', '↻ Ver otra vez'],
   ['그대로', 'None', 'なし', '无', 'Ninguno'],
   ['스르륵', 'Fade', 'ふわっと', '淡入淡出', 'Fundido'],
   ['아래에서 쏙', 'Rise up', '下からひょい', '从下冒出', 'Subir'],

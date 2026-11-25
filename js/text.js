@@ -78,14 +78,20 @@ function fxStyle(o, T) {
   o.cv.style.transformOrigin = o.origin || '50% 50%';
   o.cv.style.transform = `translate(${f.dx * 100}%, ${f.dy * 100}%) scale(${f.s})`;
 }
-// shows the chosen effect once on the preview (up to 1.6 s)
+// While a text is being edited its effect replays on the preview over and over (up to 1.6 s, then a short rest),
+// so it can be judged before moving on. Stops when another text, another effect, playback or 다 했어요 takes over.
+let demoTok = 0;
 function demoFx(o) {
-  const t0 = performance.now(), D = Math.min(1.6, o.t1 - o.t0);
-  o.demoUntil = t0 + D * 1000; // ends by time even if animation frames stop (hidden page)
+  const tok = ++demoTok;
+  const D = Math.min(1.6, o.t1 - o.t0), REST = 700;
+  let t0 = performance.now();
+  const alive = () => tok === demoTok && o === curT && !seqRun && (o.fx || 'none') !== 'none';
   const step = () => {
+    if (!alive()) { o.demoUntil = 0; fxStyle(o, 0); return; }
     const T = (performance.now() - t0) / 1000;
-    if (T >= D || o !== curT) { o.demoUntil = 0; fxStyle(o, 0); return; }
-    fxStyle(o, T); requestAnimationFrame(step);
+    if (T < D) { o.demoUntil = performance.now() + 200; fxStyle(o, T); return requestAnimationFrame(step); }
+    o.demoUntil = 0; fxStyle(o, 0); // rest on the plain text, then again
+    setTimeout(() => { t0 = performance.now(); requestAnimationFrame(step); }, REST);
   };
   requestAnimationFrame(step);
 }
@@ -128,6 +134,7 @@ export function selectText(o) {
   }
   renderLayerList();
   paintLayers();
+  if (o) demoFx(o);
 }
 function setTimes(o, t0, t1) {
   o.t0 = +Math.max(0, t0 || 0).toFixed(1);
@@ -140,6 +147,7 @@ $('#lyTpl').addEventListener('change', (e) => { curT.tpl = e.target.value; curT.
 const FONTS = { BHS: '굵게', DOH: '깔끔', JUA: '귀엽게', PEN: '손글씨' };
 const FX_NAMES = { none: '그대로', fade: '스르륵', up: '아래에서 쏙', left: '옆에서 휙', pop: '뿅', bounce: '통통', shake: '흔들흔들', blink: '깜빡깜빡' };
 $('#lyFx').innerHTML = Object.keys(FX).map((k) => `<button data-fx="${k}">${FX_NAMES[k]}</button>`).join('');
+$('#lyFxAgain').addEventListener('click', () => curT && demoFx(curT));
 $('#lyFx').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b || !curT) return; curT.fx = b.dataset.fx; paintPicks(curT); demoFx(curT); });
 const COLORS = ['#ffffff', '#ffe14d', '#ff5a5f', '#4dd2ff', '#7cfc8a', '#111111'];
 $('#lyFont').innerHTML = Object.entries(FONTS).map(([k, n]) => `<button data-f="${k}" style="font-family:${k}">${n}</button>`).join('');
