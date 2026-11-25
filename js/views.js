@@ -38,5 +38,11 @@ export function goTab(t) {
 export const toPanel = () => { const t = $('.panel').getBoundingClientRect().top; if (t < 0 || t > innerHeight * 0.6) $('.panel').scrollIntoView({ behavior: 'smooth' }); };
 $('.tabs').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b && !st.busy) { goTab(b.dataset.tab); toPanel(); } });
 document.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => { goTab(b.dataset.go); toPanel(); }));
+// 새로 만들기: everything lives in this page only, so a fresh page is a clean start (the engine stays in the browser cache)
+document.querySelectorAll('.newProj').forEach((b) => b.addEventListener('click', () => {
+  if (st.busy) return;
+  if (st.clips.length && !confirm('지금 만든 내용(영상·글자·음악)이 모두 지워져요. 저장 안 한 영상은 사라져요.\n새로 만들까요?')) return;
+  location.reload();
+}));
 $('#backEdit').addEventListener('click', () => { view = 'seq'; refreshView(); });
 export { view };

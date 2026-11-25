@@ -14,6 +14,7 @@
 <body>
 <header class="top">
   <h1>숏폼 뚝딝</h1>
+  <button class="newProj" type="button">🆕 새로 만들기</button>
   <p>영상만 넣으면 뚝딱. 영상은 이 기기 밖으로 나가지 않아요.</p>
 </header>
 
@@ -169,6 +170,7 @@
           <a class="btn cta" id="save" download>💾 저장하기</a>
           <button class="btn" id="share" hidden>📤 공유 / 사진첩</button>
         </div>
+        <button class="btn newProj" type="button">🆕 새 영상 처음부터 만들기</button>
         <div id="hlSaveBox">
           <p class="lbl">✨ 하이라이트 장면 따로 저장</p>
           <p class="hint" id="hlSaveHint">2번 자르기 칸에서 하이라이트를 찾아 고르면, 그 장면을 하나씩 mp4로 저장해요. (글자·음악 없이 원래 소리)</p>
@@ -221,7 +223,7 @@
 </template>
 
 <template id="candTpl">
-  <div class="cand"><video muted playsinline preload="metadata"></video><span class="cmeta"></span><button class="pick"></button></div>
+  <div class="cand"><div class="cthumb"><canvas></canvas></div><span class="cmeta"></span><button class="pick"></button></div>
 </template>
 
 <dialog id="fbDlg">

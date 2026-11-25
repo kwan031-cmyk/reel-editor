@@ -13,6 +13,8 @@
 }
 * { box-sizing: border-box; }
 html { background: #eef; }
+/* no zoom on a quick double tap (pinch zoom still works); later rules with touch-action: none win */
+* { touch-action: manipulation; }
 body {
   margin: 0; min-height: 100vh; color: var(--ink);
   font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Malgun Gothic", system-ui, sans-serif;
@@ -21,7 +23,10 @@ body {
 button, input, select, textarea { font: inherit; color: inherit; }
 .glass, .viewer, .panel, .tabs { background: var(--glass); border: 1px solid var(--edge); -webkit-backdrop-filter: blur(18px) saturate(1.4); backdrop-filter: blur(18px) saturate(1.4); box-shadow: var(--shadow); }
 
-.top { max-width: 1180px; margin: 0 auto; padding: 22px 20px 4px; }
+.top { max-width: 1180px; margin: 0 auto; padding: 22px 20px 4px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 10px; }
+.top p { flex-basis: 100%; }
+.top .newProj { min-height: 40px; padding: 0 14px; border: 1px solid var(--edge); border-radius: 999px; background: rgba(255,255,255,.8); font-size: 14px; font-weight: 700; color: inherit; cursor: pointer; }
+.finish .newProj { margin-top: 8px; }
 h1 { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -.8px; }
 .top p { color: var(--sub); margin: 2px 0 0; font-size: 15px; }
 
@@ -151,8 +156,11 @@ body.wide .tile { width: 84px; aspect-ratio: 16/9; }
 .cands { display: grid; grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); gap: 10px; margin: 12px 0; }
 .cand { background: #fff; border-radius: 16px; overflow: hidden; border: 2px solid transparent; display: flex; flex-direction: column; }
 .cand.on { border-color: var(--v); }
-.cand video { width: 100%; aspect-ratio: 9/16; object-fit: cover; background: #000; display: block; cursor: pointer; }
-body.wide .cand video { aspect-ratio: 16/9; }
+.cthumb { position: relative; width: 100%; aspect-ratio: 9/16; background: #000; cursor: pointer; }
+body.wide .cthumb { aspect-ratio: 16/9; }
+.cthumb canvas, .cthumb video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.cthumb::after { content: "▶"; position: absolute; inset: auto 6px 6px auto; width: 26px; height: 26px; border-radius: 50%; background: rgba(0,0,0,.45); color: #fff; font-size: 12px; display: grid; place-items: center; pointer-events: none; }
+.cand.playing .cthumb::after { content: "❚❚"; }
 .cmeta { font-size: 12px; padding: 6px 8px 0; }
 .cand .pick { margin: 6px; min-height: 40px; border: 0; border-radius: 12px; background: rgba(42,35,80,.07); font-size: 14px; }
 .cand.on .pick { background: var(--grad); color: #fff; }

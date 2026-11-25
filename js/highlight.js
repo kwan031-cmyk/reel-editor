@@ -58,24 +58,56 @@ function candInfo() {
   $('#candInfo').hidden = false;
   $('#candInfo').textContent = `고른 장면 ${on.length}개 · ${sec(on.reduce((s, k) => s + k.end - k.start, 0))}`;
 }
+// Scenes show a still picture; one shared player moves into the scene being watched.
+// (A video per scene meant many players on the same big files: phones drop some and they turn black.)
+const player = Object.assign(document.createElement('video'), { muted: true, playsInline: true, preload: 'auto' });
+let playing = null; // the scene the player is in
+function stopCand() {
+  player.pause();
+  playing?.el.classList.remove('playing');
+  playing = null;
+}
+player.addEventListener('timeupdate', () => { if (playing && player.currentTime >= playing.end) player.currentTime = playing.start; }); // loop the scene
+async function playCand(k) {
+  if (playing === k) return stopCand();
+  stopCand();
+  playing = k;
+  k.el.classList.add('playing');
+  k.el.querySelector('.cthumb').append(player);
+  if (player.src !== k.url) { player.src = k.url; await new Promise((r) => player.addEventListener('loadedmetadata', r, { once: true })); }
+  if (playing !== k) return;
+  player.currentTime = k.start;
+  player.play().catch(() => {});
+}
+// still pictures, one at a time from one hidden player
+let thumbTok = 0;
+async function drawThumbs(list) {
+  const tok = ++thumbTok, v = Object.assign(document.createElement('video'), { muted: true, playsInline: true, preload: 'auto' });
+  const wait = (ev) => new Promise((r) => { v.addEventListener(ev, r, { once: true }); v.addEventListener('error', r, { once: true }); setTimeout(r, 4000); });
+  for (const k of list) {
+    if (tok !== thumbTok) break;
+    if (v.src !== k.url) { v.src = k.url; await wait('loadeddata'); }
+    v.currentTime = Math.min(k.start + 0.3, (k.start + k.end) / 2);
+    await wait('seeked');
+    const cv = k.el.querySelector('canvas');
+    if (v.videoWidth) { cv.width = v.videoWidth / 4; cv.height = v.videoHeight / 4; cv.getContext('2d').drawImage(v, 0, 0, cv.width, cv.height); }
+  }
+  v.removeAttribute('src'); v.load(); // let the decoder go
+}
 function renderCands(list, chosen) {
-  cands.forEach((k) => URL.revokeObjectURL(k.url));
+  stopCand();
+  player.removeAttribute('src');
+  new Set(cands.map((k) => k.url)).forEach((u) => URL.revokeObjectURL(u));
+  const urls = new Map(); // one object URL per original file
   const box = $('#cands');
   box.innerHTML = '';
   const vmax = Math.max(...list.map((k) => k.v), 1e-6);
   cands = list.map((k) => {
     const el = $('#candTpl').content.firstElementChild.cloneNode(true);
-    const url = URL.createObjectURL(hlSrc[k.i].file), v = el.querySelector('video');
-    const cand = { ...k, el, url, on: chosen.some((p) => p.i === k.i && p.start === k.start) };
-    v.src = url;
-    v.addEventListener('loadedmetadata', () => { v.currentTime = k.start; });
-    v.addEventListener('timeupdate', () => { if (v.currentTime >= k.end) v.currentTime = k.start; }); // loop the scene
-    v.addEventListener('click', () => {
-      if (!v.paused) return v.pause();
-      cands.forEach((x) => x !== cand && x.el.querySelector('video').pause());
-      if (v.currentTime < k.start || v.currentTime >= k.end) v.currentTime = k.start;
-      v.play();
-    });
+    const f = hlSrc[k.i].file;
+    if (!urls.has(f)) urls.set(f, URL.createObjectURL(f));
+    const cand = { ...k, el, url: urls.get(f), on: chosen.some((p) => p.i === k.i && p.start === k.start) };
+    el.querySelector('.cthumb').addEventListener('click', () => playCand(cand));
     el.querySelector('.cmeta').textContent =
       `${k.i + 1}번 영상 · ${k.start.toFixed(1)}~${k.end.toFixed(1)}초 ${'★'.repeat(Math.max(1, Math.round((k.v / vmax) * 3)))}`;
     el.querySelector('.pick').addEventListener('click', () => { if (st.busy) return; cand.on = !cand.on; paintCand(cand); candInfo(); });
@@ -83,6 +115,7 @@ function renderCands(list, chosen) {
     box.append(el);
     return cand;
   });
+  drawThumbs(cands);
   box.hidden = $('#hlMake').hidden = false;
   candInfo();
 }
@@ -153,6 +186,7 @@ $('#hlMake').addEventListener('click', async () => {
   const on = cands.filter((k) => k.on);
   if (!on.length) { alert('샘플에 쓸 장면을 하나 이상 골라 주세요.'); return; }
   if (st.busy) return;
+  stopCand();
   arrange(on);
   hlSay('고른 장면으로 바꿨어요. 화면에서 바로 이어서 보여 줄게요. 마음에 들면 5번 모양 칸에서 🎬 영상 만들기를 눌러요.');
   stopSeq();
