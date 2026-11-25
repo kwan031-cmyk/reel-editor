@@ -500,7 +500,7 @@ function renderCands(list, chosen) {
     box.append(el);
     return cand;
   });
-  box.hidden = $('#hlMake').hidden = $('#hlSaveBox').hidden = false;
+  box.hidden = $('#hlMake').hidden = false;
   candInfo();
 }
 
@@ -508,7 +508,11 @@ function renderCands(list, chosen) {
 let hlUrls = [];
 $('#hlSave').addEventListener('click', async () => {
   const on = cands.filter((k) => k.on).sort((a, b) => a.i - b.i || a.start - b.start);
-  if (!on.length) { alert('2번 자르기 칸에서 저장할 장면을 하나 이상 골라 주세요.'); return; }
+  if (!on.length) { // nothing picked yet: take them to the highlight finder
+    goTab('cut'); toPanel();
+    hlSay(cands.length ? '저장할 장면을 하나 이상 골라 주세요. 그다음 5번 모양 칸에서 다시 눌러요.' : '먼저 "✨ 하이라이트 찾기"를 눌러 장면을 찾아요. 고른 다음 5번 모양 칸에서 "장면마다 따로 저장"을 눌러요.');
+    return;
+  }
   if (busy) return;
   lock(true);
   const [W, H] = dims(opt.q);
