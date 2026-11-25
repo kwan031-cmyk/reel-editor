@@ -28,11 +28,23 @@ export async function wake(v) {
   const muted = v.muted;
   v.muted = true;
   const p = v.play();
-  p?.catch(() => {});
+  p?.catch(() => asleep.add(v)); // refused (iPhone Low Power Mode): try again on the first tap
   await Promise.race([p, new Promise((r) => setTimeout(r, 1500))]).catch(() => {});
   v.pause();
   v.muted = muted;
 }
+// A tap allows playing, so videos that refused to wake are woken (and re-seeked to repaint) on the first one,
+// and other work waiting for it (scene pictures) runs again.
+const asleep = new Set(), onTap = [];
+export const afterTap = (fn) => onTap.push(fn);
+const tapped = () => {
+  if (!asleep.size && !onTap.length) return;
+  const vs = [...asleep];
+  asleep.clear();
+  vs.forEach((v) => { const t = v.currentTime; wake(v).then(() => { v.currentTime = t; }); }); // play() starts inside the tap
+  onTap.splice(0).forEach((fn) => fn());
+};
+['touchend', 'click'].forEach((e) => document.addEventListener(e, tapped, { capture: true, passive: true }));
 // state more than one step changes (one object so every file sees the same values)
 // clips: { file, url, dur, start, end, text, trans, fix, ana, el } · sel: clip being cut · backup: clips before highlights
 export const st = { backup: null, busy: false, clips: [], nowT: 0, onLog: null, outUrl: null, sel: null, seq: 0 };

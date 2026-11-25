@@ -57,7 +57,7 @@ export function stopSeq() {
   $('#seqStage').querySelector('audio')?.pause();
   syncCtl();
 }
-export async function playSeq() {
+export async function playSeq(ready) {
   if (seqRun) return;
   setView('seq');
   const tl = timeline(), list = tl.list.map((x) => x.c);
@@ -78,6 +78,8 @@ export async function playSeq() {
   }
   syncCtl();
   run.tick = setInterval(() => { if (run.v) { st.nowT = Math.min(tl.total, run.at + run.v.currentTime - run.c.start); syncCtl(); paintLayers(); } }, 50);
+  await ready; // players touched inside the tap have finished their play-pause
+  if (run.stop) return;
   await prep(cur, list[i0], list[i0].start + st.nowT - tl.list[i0].at);
   if (run.stop) return;
   cur.style.opacity = 1;
@@ -130,8 +132,20 @@ function togglePlay() {
   const m = media();
   if (m) { if (m.paused || m.ended) m.play().catch(() => {}); else m.pause(); }
   else if (seqRun) stopSeq();
-  else playSeq();
+  else playSeq(unlock());
   syncCtl();
+}
+// iPhones (Low Power Mode) let a video play later only if it was first played inside a tap:
+// the preview starts its players a moment after the tap, so touch them all now
+export function unlock() {
+  return Promise.all([...$('#seqStage').querySelectorAll('video, audio')].map((v) => {
+    if (v.dataset.unlocked) return null;
+    if (!v.src && v.tagName === 'VIDEO' && st.clips[0]) v.src = v.dataset.src = st.clips[0].url; // the second player is still empty
+    if (!v.src) return null;
+    const muted = v.muted;
+    v.muted = true;
+    return v.play().then(() => { v.pause(); v.dataset.unlocked = 1; }, () => {}).finally(() => { v.muted = muted; });
+  }));
 }
 $('#cPlay').addEventListener('click', togglePlay);
 $('#cHome').addEventListener('click', () => {

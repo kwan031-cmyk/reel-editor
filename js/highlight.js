@@ -2,8 +2,8 @@ import { t } from './i18n.js';
 import { dropClips, newClip, renderList, sec } from './clips.js';
 import { analyze, cancelled, engine, ext, fitPicture, lock, logs, resetEngine, withMount } from './engine.js';
 import { bar, make, say } from './export.js';
-import { playSeq, stopSeq } from './preview.js';
-import { $, dims, opt, st, wake } from './state.js';
+import { playSeq, stopSeq, unlock } from './preview.js';
+import { $, afterTap, dims, opt, st, wake } from './state.js';
 import { goTab, toPanel } from './views.js';
 import { STEP, candidates, pickHighlights, scores, segLenFor } from '../analyze.js';
 import { buildArgs } from '../build.js';
@@ -75,10 +75,12 @@ async function playCand(k) {
   playing = k;
   k.el.classList.add('playing');
   k.el.querySelector('.cthumb').append(player);
-  if (player.src !== k.url) { player.src = k.url; await new Promise((r) => player.addEventListener('loadedmetadata', r, { once: true })); }
+  const fresh = player.src !== k.url;
+  if (fresh) player.src = k.url;
+  player.play().catch(() => {}); // inside the tap: iPhones in Low Power Mode allow playing only here
+  if (fresh && player.readyState < 1) await new Promise((r) => player.addEventListener('loadedmetadata', r, { once: true }));
   if (playing !== k) return;
   player.currentTime = k.start;
-  player.play().catch(() => {});
 }
 // still pictures, one at a time from one hidden player
 let thumbTok = 0;
@@ -95,6 +97,8 @@ async function drawThumbs(list) {
     if (v.videoWidth) { cv.width = v.videoWidth / 4; cv.height = v.videoHeight / 4; cv.getContext('2d').drawImage(v, 0, 0, cv.width, cv.height); }
   }
   v.removeAttribute('src'); v.load(); // let the decoder go
+  const blank = list.filter((k) => !k.el.querySelector('canvas').width);
+  if (blank.length && tok === thumbTok) afterTap(() => drawThumbs(blank)); // the phone refused to load them; a tap allows it
 }
 function renderCands(list, chosen) {
   stopCand();
@@ -193,7 +197,7 @@ $('#hlMake').addEventListener('click', async () => {
   hlSay('고른 장면으로 바꿨어요. 화면에서 바로 이어서 보여 줄게요. 마음에 들면 5번 모양 칸에서 🎬 영상 만들기를 눌러요.');
   stopSeq();
   scrollTo({ top: 0, behavior: 'smooth' });
-  playSeq();
+  playSeq(unlock());
 });
 $('#hlUndo').addEventListener('click', () => {
   if (!st.backup || st.busy) return;
