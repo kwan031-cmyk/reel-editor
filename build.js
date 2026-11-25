@@ -18,7 +18,8 @@ export function buildArgs({ clips, overlays = [], music, keepOrig, fit, W, H, ou
     a.push('-ss', c.start.toFixed(3), '-t', t, '-i', c.path);
     const vi = n++;
     // settb: xfade needs identical timebases on both sides
-    let v = `[${vi}:v]${scale},setsar=1,fps=30,settb=AVTB,trim=duration=${t}`;
+    // tpad: if the picture runs out early, hold its last frame so the clip keeps its length and sound stays in sync
+    let v = `[${vi}:v]${scale},setsar=1,fps=30,settb=AVTB,tpad=stop_mode=clone:stop_duration=${t},trim=duration=${t}`;
     if (c.textPath) {
       a.push('-i', c.textPath);
       const ti = n++;

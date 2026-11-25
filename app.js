@@ -62,6 +62,22 @@ async function probe(ff, path) {
   return { dur: m ? +m[1] * 3600 + +m[2] * 60 + +m[3] : 0, hasAudio: /Stream #\d+:\d+.*Audio:/.test(text) };
 }
 
+// Picture length of a file: phone videos often have sound that runs past the picture,
+// and the file's own length is the longer of the two. Copying (no decoding) to nowhere reports the last picture time.
+async function videoLen(ff, path) {
+  const from = logs.length;
+  await ff.exec(['-hide_banner', '-i', path, '-map', '0:v:0', '-c', 'copy', '-f', 'null', '-']);
+  const ts = logs.slice(from).map(secOf).filter((t) => t != null);
+  return ts.length ? ts[ts.length - 1] : 0;
+}
+// A clip never reaches past its picture: shrink its length and pull the chosen end back if needed.
+function fitPicture(c, vdur) {
+  if (!(vdur > MIN) || vdur >= c.dur - 0.05) return;
+  c.dur = +vdur.toFixed(2);
+  c.el.querySelectorAll('.s, .e, .sn, .en').forEach((x) => (x.max = c.dur.toFixed(1)));
+  setRange(c, c.start, c.end);
+}
+
 async function withMount(files, fn) {
   const ff = await engine();
   const dir = `/in${++seq}`;
@@ -92,7 +108,8 @@ async function analyze(c, say = () => {}) {
     await ff.deleteFile('ana_v.raw').catch(() => {});
     if (hasAudio) await ff.deleteFile('ana_a.raw').catch(() => {});
     const env = envelope(new Float32Array(a.buffer, a.byteOffset, a.byteLength >> 2), 16000);
-    return { dur: dur || c.dur, hasAudio, env, spikes: findSpikes(env), motion: motion(v, 32 * 56) };
+    const mo = motion(v, 32 * 56);
+    return { dur: dur || c.dur, vdur: mo.length * STEP, hasAudio, env, spikes: findSpikes(env), motion: mo };
   });
   return c.ana;
 }
@@ -145,7 +162,7 @@ function makeCard(c) {
   c.el = el;
   c.frame = q('.frame'); // shown in the viewer while cutting this clip
   const init = (dur) => {
-    c.dur = dur;
+    c.dur = dur = Math.min(dur, c.vdur ?? c.ana?.vdur ?? dur); // the file length may include sound past the picture
     if (!c.end || c.end > dur) c.end = dur;
     q('.s').max = q('.e').max = q('.sn').max = q('.en').max = dur.toFixed(1);
     setRange(c, c.start, c.end);
@@ -417,8 +434,9 @@ async function findHighlights() {
   await engine(hlSay);
   for (const [k, c] of src.entries())
     await analyze(c, (p) => hlSay(`영상 살펴보는 중… ${k + 1}/${src.length}번 (${Math.round(p * 100)}%)`));
+  src.forEach((c) => fitPicture(c, c.ana.vdur)); // no scenes where only the sound is left
   const sc = scores(src.map((c) => c.ana));
-  const items = src.map((c, i) => ({ dur: c.dur, score: sc[i] }));
+  const items = src.map((c, i) => ({ dur: c.dur, score: sc[i].slice(0, Math.round(c.dur / STEP)) }));
   const target = +opt.hlLen;
   hlSrc = src;
   renderCands(candidates(items, segLenFor(target, src.length), 5).sort((a, b) => a.i - b.i || a.start - b.start),
@@ -811,6 +829,12 @@ async function make(sample) {
     const files = list.map((c, i) => new File([c.file], names[i]));
     if (opt.music) files.push(new File([opt.music], 'music' + ext(opt.music.name)));
     const data = await withMount(files, async (ff, dir) => {
+      // first make sure no clip reaches past the end of its picture (lengths and text times depend on it)
+      for (const [i, c] of list.entries()) {
+        say(`영상 길이 확인 중… ${i + 1}/${list.length}`);
+        c.vdur ??= c.ana?.vdur ?? await videoLen(ff, `${dir}/${names[i]}`);
+        fitPicture(c, c.vdur);
+      }
       const items = [];
       for (const [i, c] of list.entries()) {
         const it = { path: `${dir}/${names[i]}`, start: c.start, dur: c.end - c.start, hasAudio: false, trans: c.trans };

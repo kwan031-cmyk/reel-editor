@@ -99,4 +99,18 @@ for (const c of cases) {
   assert.ok(diff(3.7) > 30, `second overlay visible at 3.7s (${diff(3.7)})`);
   console.log('OK timed text');
 }
+// a clip whose picture ends before its sound: the joined video still has picture for the whole length
+{
+  run('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'testsrc2=s=180x320:r=30:d=4', '-f', 'lavfi', '-i', 'sine=f=440:d=8', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac', 'short.mp4']);
+  const clips = [
+    { path: 'short.mp4', start: 0, dur: 2, hasAudio: true, trans: 'fade' },
+    { path: 'short.mp4', start: 3.5, dur: 3, hasAudio: true, trans: 'cut' }, // only 0.5 s of picture left
+    { path: 'short.mp4', start: 1, dur: 2, hasAudio: true },
+  ];
+  const { args, total } = buildArgs({ clips, music: null, keepOrig: true, fit: 'cover', W: 180, H: 320, out: 'short_out.mp4' });
+  run('ffmpeg', args);
+  const v = probe(join(dir, 'short_out.mp4')).streams.find((s) => s.codec_type === 'video');
+  assert.ok(Math.abs(Number(v.duration) - total) < 0.15, `picture ${v.duration}s vs ${total}s`);
+  console.log('OK short picture', v.duration, total);
+}
 console.log('all passed');
