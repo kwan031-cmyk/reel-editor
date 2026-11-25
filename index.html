@@ -65,7 +65,9 @@
         </div>
         <button class="btn cta big" id="autoBtn">🪄 뚝딱 만들기</button>
         <p id="hlMsg" class="msg hlmsg" hidden></p>
+        <button class="btn stopJob" type="button" hidden>✋ 그만하기 (취소)</button>
       </div>
+      <p class="msg bigwarn" hidden></p>
       <div class="navrow"><button class="btn next" data-go="cut">다음: 자르기 ▶</button></div>
     </div>
 
@@ -82,6 +84,7 @@
         </div>
         <button class="btn cta" id="hlBtn">✨ 하이라이트 찾기</button>
         <p class="msg hlmsg" hidden></p>
+        <button class="btn stopJob" type="button" hidden>✋ 그만하기 (취소)</button>
         <div id="cands" class="cands" hidden></div>
         <p id="candInfo" class="total" hidden></p>
         <button class="btn cta" id="hlMake" hidden>▶ 고른 장면으로 바꾸기</button>
@@ -155,10 +158,12 @@
       </div>
       <div class="finish">
         <h3>🎬 다 됐으면 만들어요</h3>
+        <p class="msg bigwarn" hidden></p>
         <button class="btn cta big" id="make">🎬 영상 만들기</button>
         <div id="prog" hidden>
           <div class="bar"><i id="barFill"></i></div>
           <p id="progMsg" class="hint"></p>
+          <button class="btn stopJob" type="button" hidden>✋ 그만하기 (취소)</button>
         </div>
         <div class="saverow" id="saveRow" hidden>
           <a class="btn cta" id="save" download>💾 저장하기</a>

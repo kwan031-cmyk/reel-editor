@@ -276,3 +276,4 @@ dialog h3 { margin: 0 0 4px; }
   .tabs button { flex-direction: column; gap: 1px; font-size: 11px; padding: 4px 2px; }
 }
 .tabs button span { white-space: nowrap; }
+.stopJob { margin-top: 8px; background: #fff; color: #e11d48; border-color: #fecdd3; }
