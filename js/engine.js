@@ -1,7 +1,7 @@
 import { setRange } from './clips.js';
 import { stopSeq } from './preview.js';
 import { MIN, st } from './state.js';
-import { STEP, envelope, findSpikes, motion } from '../analyze.js';
+import { STEP, envelope, findSpikes, light, motion } from '../analyze.js';
 import { FFmpeg } from '../vendor/ffmpeg/index.js';
 
 /* ---------- engine (ffmpeg.wasm, runs inside the browser) ---------- */
@@ -96,8 +96,8 @@ export async function analyze(c, say = () => {}) {
     await ff.deleteFile('ana_v.raw').catch(() => {});
     if (hasAudio) await ff.deleteFile('ana_a.raw').catch(() => {});
     const env = envelope(new Float32Array(a.buffer, a.byteOffset, a.byteLength >> 2), 16000);
-    const mo = motion(v, 32 * 56);
-    return { dur: dur || c.dur, vdur: mo.length * STEP, hasAudio, env, spikes: findSpikes(env), motion: mo };
+    const mo = motion(v, 32 * 56, 32);
+    return { dur: dur || c.dur, vdur: mo.length * STEP, hasAudio, env, spikes: findSpikes(env), motion: mo, light: light(v, 32 * 56) };
   });
   return c.ana;
 }

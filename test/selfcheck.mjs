@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import assert from 'node:assert/strict';
 import { buildArgs, TRANS_SEC } from '../build.js';
-import { envelope, findSpikes, motion, scores, pickHighlights, candidates, STEP } from '../analyze.js';
+import { envelope, findSpikes, motion, light, scores, pickHighlights, candidates, STEP } from '../analyze.js';
 
 /* ---- analysis helpers ---- */
 {
@@ -46,6 +46,46 @@ import { envelope, findSpikes, motion, scores, pickHighlights, candidates, STEP 
   const top3 = cs.slice(0, 3).map((x) => x.start).sort((p, q) => p - q);
   assert.deepEqual(top3, [10, 30, 50], JSON.stringify(cs));
   for (const x of cs) for (const y of cs) if (x !== y) assert.ok(x.end + 0.5 <= y.start || y.end + 0.5 <= x.start, 'no overlap');
+
+  // camera sliding over a still textured scene counts much less than a square moving in a still scene
+  const W = 32, H = 56, tex = (x, y) => ((x * 37 + y * 91) % 256);
+  const pan = new Uint8Array(W * H * 2), obj = new Uint8Array(W * H * 2);
+  for (let f = 0; f < 2; f++) for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    pan[f * W * H + y * W + x] = tex(x + f, y);
+    obj[f * W * H + y * W + x] = (x >= 8 + f * 10 && x < 16 + f * 10 && y >= 20 && y < 30) ? 255 : 0;
+  }
+  const mp = motion(pan, W * H, W)[1], mo = motion(obj, W * H, W)[1];
+  assert.ok(mp < 0.01 && mo > 0.05, `pan ${mp} vs object ${mo}`);
+
+  // light: black and flat frames are spotted
+  const lt = light(new Uint8Array([0, 0, 0, 0, 200, 200, 200, 200, 0, 255, 0, 255]), 4);
+  assert.ok(lt[0].mean < 0.01 && lt[1].std < 0.01 && lt[2].std > 0.4, JSON.stringify(lt));
+
+  // a bang over quiet beats steady loud noise; both clips have the same small movement
+  const flat = (dur, rms, bang) => ({ motion: Array(dur / STEP).fill(0.02),
+    env: Array.from({ length: dur / STEP }, (_, i) => ({ rms: bang && i * STEP >= 5 && i * STEP < 7 ? 0.5 : rms, peak: 0.6 })) });
+  const sn = scores([flat(10, 0.4, false), flat(10, 0.02, true)]);
+  const hn = pickHighlights([{ dur: 10, score: sn[0] }, { dur: 10, score: sn[1] }], 2);
+  assert.ok(hn.length === 1 && hn[0].i === 1 && hn[0].start >= 4 && hn[0].start <= 6, `bang wins ${JSON.stringify(hn)}`);
+
+  // a dark stretch is passed over even when it moves as much
+  const dk = { ...mk(10, (t) => (t >= 1 && t < 3) || (t >= 6 && t < 8)),
+    light: Array.from({ length: 40 }, (_, i) => ({ mean: i * STEP < 4 ? 0.02 : 0.5, std: 0.2 })) };
+  const hd = pickHighlights([{ dur: 10, score: scores([dk])[0] }], 2);
+  assert.ok(hd[0].start >= 5, `dark skipped ${JSON.stringify(hd)}`);
+
+  // a one-frame jump (a cut inside the video) is not action
+  const cut = mk(10, (t) => t >= 7 && t < 9);
+  cut.motion[10] = 1; // 2.5s: one big jump
+  const hc = pickHighlights([{ dur: 10, score: scores([cut])[0] }], 2);
+  assert.ok(hc[0].start >= 6, `cut ignored ${JSON.stringify(hc)}`);
+
+  // two good videos, room for two scenes: one from each, even if video 0 has two better ones
+  const two = [mk(20, (t) => (t >= 2 && t < 4) || (t >= 12 && t < 14)), mk(20, (t) => t >= 8 && t < 10)];
+  two[1].motion = two[1].motion.map((m) => m * 0.8);
+  const st2 = scores(two);
+  const h2 = pickHighlights([{ dur: 20, score: st2[0] }, { dur: 20, score: st2[1] }], 4);
+  assert.deepEqual(h2.map((x) => x.i), [0, 1], `one from each ${JSON.stringify(h2)}`);
   console.log('OK analysis helpers');
 }
 
