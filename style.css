@@ -233,3 +233,46 @@ dialog h3 { margin: 0 0 4px; }
   .tabs button { padding: 7px 2px; font-size: 11px; }
   .btns .btn, .navrow .btn { font-size: 15px; padding: 8px 6px; }
 }
+
+/* ---- small phones held upright: smaller pinned screen and bars so the step has room ---- */
+@media (max-width: 860px) and (orientation: portrait) and (max-height: 720px) {
+  .screen { height: 28vh; }
+  body.wide .screen { width: min(100%, calc(28vh * 16 / 9)); }
+  .screenbar { padding: 6px 12px 8px; gap: 6px; }
+  .ctlbar { padding: 4px 8px; }
+  .cbtn { width: 36px; height: 36px; }
+  .cbtn.play { width: 44px; height: 44px; }
+  .tabs button { padding: 5px 2px; gap: 1px; }
+  .tabs svg { width: 20px; height: 20px; }
+  body { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
+  .panel { scroll-margin-top: calc(28vh + 70px); }
+}
+
+/* ---- phones held sideways: video on the left, steps on the right, tabs on top of the steps ---- */
+@media (orientation: landscape) and (max-height: 540px) {
+  body { padding-bottom: 0; }
+  .top { display: none; }
+  .app { display: grid; grid-template-columns: minmax(230px, 36vw) 1fr; align-items: start; gap: 10px; padding: 8px 10px; }
+  body.wide .app { grid-template-columns: minmax(280px, 46vw) 1fr; }
+  .viewer { display: flex; position: sticky; top: 8px; max-height: calc(100vh - 16px); overflow-y: auto; padding: 8px; gap: 6px; border-radius: 20px; }
+  .viewer > :not(.screenbar) { margin: 0; }
+  .screenbar { position: static; margin: 0; padding: 0; background: none; border: 0; -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none; gap: 6px; }
+  .screen { height: calc(100vh - 98px); }
+  body.wide .screen { height: auto; width: 100%; }
+  .ctlbar { padding: 3px 6px; gap: 6px; }
+  .ctlbar b { min-width: 0; font-size: 12px; }
+  .cbtn { width: 34px; height: 34px; }
+  .cbtn.play { width: 42px; height: 42px; }
+  .viewname, .hint.small { display: none; }
+  .tile { width: 44px; }
+  .panel { margin: 0; scroll-margin-top: 8px; }
+  .tabs { position: sticky; top: 8px; left: auto; right: auto; bottom: auto; z-index: 10; margin: 8px; border-radius: 18px; }
+  .tabs button { flex-direction: row; justify-content: center; gap: 6px; padding: 6px 4px; font-size: 13px; }
+  .tabs svg { width: 18px; height: 18px; }
+  .pane { padding: 6px 14px 16px; }
+  h2 { font-size: 19px; margin: 4px 0 8px; }
+}
+@media (orientation: landscape) and (max-height: 540px) and (max-width: 740px) {
+  .tabs button { flex-direction: column; gap: 1px; font-size: 11px; padding: 4px 2px; }
+}
+.tabs button span { white-space: nowrap; }
