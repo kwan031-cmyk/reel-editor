@@ -163,8 +163,6 @@ function makeCard(c) {
     } catch { q('.len').textContent = '읽을 수 없는 영상'; }
   });
   // preview loops inside the chosen range
-  v.addEventListener('timeupdate', () => { if (!v.paused && c.end && v.currentTime >= c.end) { v.pause(); v.currentTime = c.start; } });
-  v.addEventListener('play', () => { if (v.currentTime < c.start - 0.05 || v.currentTime >= c.end) v.currentTime = c.start; });
 
   q('.s').addEventListener('input', (e) => { setRange(c, +e.target.value, c.end, 's'); v.currentTime = c.start; });
   q('.e').addEventListener('input', (e) => { setRange(c, c.start, +e.target.value, 'e'); v.currentTime = c.end; });
@@ -266,7 +264,10 @@ function renderList() {
     if (strip.children[k] !== node) strip.insertBefore(node, strip.children[k] || null);
   });
   strip.hidden = $('#stripHint').hidden = !clips.length;
-  $('#cutHint').textContent = clips.length ? '아래 그림에서 고칠 영상을 눌러요. 위 화면에서 영상을 틀고 "여기부터 / 여기까지"를 눌러요.' : '먼저 1번에서 영상을 넣어요.';
+  $('#cutHint').textContent = clips.length ? '고칠 영상을 골라요.' : '먼저 1번에서 영상을 넣어요.';
+  $('#clipPick').replaceChildren(...clips.map((c, i) => Object.assign(document.createElement('button'), {
+    type: 'button', className: c === sel ? 'on' : '', textContent: `${i + 1}번 영상`,
+    onclick: () => { if (!busy) { sel = c; renderList(); } } })));
   refreshView();
   renderTotal();
 }
@@ -346,8 +347,7 @@ $('#strip').addEventListener('keydown', (e) => {
   if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); moveClip(c, clips.indexOf(c) + (e.key === 'ArrowLeft' ? -1 : 1)); c.tile.focus(); }
 });
 function renderTotal() {
-  const t = clips.reduce((s, c, i) => s + (c.end - c.start) - (i < clips.length - 1 && c.trans !== 'cut' ? +opt.trSec : 0), 0);
-  $('#seqPos').max = timeline().total.toFixed(1);
+  const t = timeline().total;
   if (view === 'seq' && !seqRun && !busy) showAt(nowT); // keep a frame on screen instead of black
   $('#total').textContent = clips.length ? `전체 길이: ${sec(t)}${t > 90 ? ' — 릴스는 90초까지라 조금 줄이는 게 좋아요' : ''}` : '';
 }
@@ -361,14 +361,19 @@ document.querySelectorAll('.seg').forEach((seg) => seg.addEventListener('click',
   document.body.classList.toggle('contain', opt.fit === 'contain');
   document.body.classList.toggle('wide', opt.ratio === '16:9');
   if (seg.dataset.k === 'ratio') texts.forEach(paintLayer);
-  if (seg.dataset.k === 'trSec') { $('#trSecIn').value = opt.trSec; renderTotal(); }
+  if (seg.dataset.k === 'trSec') setTrSec(+opt.trSec);
 }));
-$('#trSecIn').addEventListener('change', (e) => {
-  const v = Math.min(3, Math.max(0.1, Math.round(+e.target.value * 10) / 10 || 0.4)); // keep it sane; clips still cap it at half their length
-  e.target.value = opt.trSec = String(v);
+function setTrSec(x) {
+  const v = Math.min(3, Math.max(0.05, Math.round(x * 20) / 20 || 0.4)); // 0.05 s steps; clips still cap it at half their length
+  opt.trSec = String(+v.toFixed(2));
+  $('#trSecIn').value = $('#trSecR').value = opt.trSec;
+  $('#trSecV').textContent = `${(+opt.trSec).toFixed(2)}초`;
   document.querySelectorAll('[data-k=trSec] button').forEach((x) => x.classList.toggle('on', +x.dataset.v === v));
   renderTotal();
-});
+}
+$('#trSecIn').addEventListener('change', (e) => setTrSec(+e.target.value));
+$('#trSecR').addEventListener('input', (e) => setTrSec(+e.target.value));
+document.querySelectorAll('.nudge').forEach((b) => b.addEventListener('click', () => setTrSec(+opt.trSec + +b.dataset.d)));
 $('#musicVol').addEventListener('input', (e) => { opt.vol = +e.target.value; $('#musicVolV').textContent = `${opt.vol}%`; });
 $('#musicPick').addEventListener('change', (e) => {
   const f = e.target.files[0];
@@ -424,7 +429,7 @@ $('#hlBtn').addEventListener('click', async () => {
   lock(true);
   try {
     if (await findHighlights())
-      hlSay(`장면 ${cands.length}개를 찾았어요. 장면을 누르면 미리 볼 수 있어요. 쓸 장면을 고르고 "배치해서 이어보기"를 누르세요. (★가 많을수록 움직임·소리가 커요)`);
+      hlSay(`장면 ${cands.length}개를 찾았어요. 장면을 누르면 미리 볼 수 있어요. 쓸 장면을 고르고 "고른 장면으로 바꾸기"를 눌러요. (★가 많을수록 움직임·소리가 커요)`);
   } catch (err) {
     console.error(err); resetEngine(); hlSay('영상을 살펴보지 못했어요. 다시 눌러 주세요.');
   } finally { lock(false); }
@@ -438,10 +443,10 @@ $('#autoBtn').addEventListener('click', async () => {
   finally { lock(false); }
   if (!ok) return;
   arrange(cands.filter((k) => k.on));
-  hlSay(`추천 장면 ${clips.length}개를 이어 붙여 영상을 만들고 있어요. 다 되면 4번에 나와요. 장면·순서·글자는 아래에서 바꾸고 다시 만들 수 있어요.`);
+  hlSay(`추천 장면 ${clips.length}개를 이어 붙여 영상을 만들고 있어요. 다 되면 화면에 바로 나와요.`);
   await make(false);
-  hlSay($('#saveRow').hidden ? '영상을 만들지 못했어요. 4번의 안내를 확인해 주세요.'
-    : `완성! 추천 장면 ${clips.length}개로 만든 영상이 4번에 있어요. 장면·순서·글자를 바꾸고 다시 만들 수도 있어요.`);
+  hlSay($('#saveRow').hidden ? '영상을 만들지 못했어요. 🎬 영상 만들기 아래 안내를 봐 주세요.'
+    : `완성! 추천 장면 ${clips.length}개로 만든 영상이 화면에 나왔어요. 💾 저장하기를 눌러요. 고치고 싶으면 2~5번 칸에서 바꾸고 다시 만들면 돼요.`);
 });
 
 const paintCand = (k) => { k.el.classList.toggle('on', k.on); k.el.querySelector('.pick').textContent = k.on ? '✔ 쓸 거예요' : '＋ 고르기'; };
@@ -522,7 +527,7 @@ $('#hlSave').addEventListener('click', async () => {
     hlSay(`장면 클립 ${on.length}개 완성! 아래 버튼을 눌러 하나씩 저장하세요.`);
   } catch (err) {
     console.error(err); resetEngine();
-    hlSay('장면 클립을 만들지 못했어요. 3번에서 "빠르게 720p"를 고르고 다시 해 보세요.');
+    hlSay('장면 클립을 만들지 못했어요. 5번 모양 칸에서 "빠르게 720p"를 고르고 다시 해 보세요.');
   } finally { lock(false); }
 });
 function arrange(on) {
@@ -540,10 +545,10 @@ $('#hlMake').addEventListener('click', async () => {
   if (!on.length) { alert('샘플에 쓸 장면을 하나 이상 골라 주세요.'); return; }
   if (busy) return;
   arrange(on);
-  hlSay('고른 장면을 아래에 배치했어요. 이어서 보기로 확인하고, 마음에 들면 "샘플 저장"을 누르세요. 순서·트랜지션은 아래에서 바꿀 수 있어요.');
+  hlSay('고른 장면으로 바꿨어요. 화면에서 바로 이어서 보여 줄게요. 마음에 들면 🎬 영상 만들기를 눌러요.');
   stopSeq();
-  $('#seq').scrollIntoView({ behavior: 'smooth', block: 'center' });
-  $('#seqPlay').click();
+  scrollTo({ top: 0, behavior: 'smooth' });
+  playSeq();
 });
 $('#hlSample').addEventListener('click', async () => {
   if (busy || !clips.length) return;
@@ -565,15 +570,17 @@ let seqRun = null, musicUrl = null, musicOf = null;
 const until = (run, fn) => new Promise((res) => { const tick = () => (run.stop || fn() ? res() : setTimeout(tick, 25)); tick(); });
 const playSafe = (v) => v.play().catch(() => { v.muted = true; return v.play().catch(() => {}); }); // autoplay rules may block sound
 
-function prep(v, c) {
+function prep(v, c, t = c.start) {
   v.getAnimations().forEach((a) => a.cancel());
   v.style.cssText = 'opacity:0';
   v.muted = opt.keepOrig !== '1';
   if (v.dataset.src !== c.url) { v.src = c.url; v.dataset.src = c.url; }
-  return new Promise((res) => {
-    const go = () => { v.addEventListener('seeked', res, { once: true }); v.currentTime = c.start; };
+  const seek = new Promise((res) => {
+    const go = () => { v.addEventListener('seeked', res, { once: true }); v.currentTime = t; };
     v.readyState >= 1 ? go() : v.addEventListener('loadedmetadata', go, { once: true });
+    v.addEventListener('error', res, { once: true });
   });
+  return Promise.race([seek, new Promise((r) => setTimeout(r, 3000))]);
 }
 function act(t, a, b, veil, ms) {
   const o = { duration: ms, easing: 'ease-in-out' };
@@ -602,36 +609,42 @@ function stopSeq() {
   paintLayers();
   $('#seqStage').querySelectorAll('video').forEach((v) => v.pause());
   $('#seqStage').querySelector('audio')?.pause();
-  $('#seqPlay').textContent = '▶ 처음부터 이어서 보기 (트랜지션 포함)';
+  syncCtl();
 }
-$('#seqPlay').addEventListener('click', async () => {
-  if (seqRun) return stopSeq();
+async function playSeq() {
+  if (seqRun) return;
+  setView('seq');
   const tl = timeline(), list = tl.list.map((x) => x.c);
   if (!list.length) return;
-  const run = (seqRun = { stop: false, at: 0, c: list[0], v: null });
-  $('#seqPlay').textContent = '■ 멈추기';
-  setView('seq');
+  if (nowT >= tl.total - 0.1) nowT = 0; // at the end: play again from the start
+  const i0 = Math.max(0, tl.list.findLastIndex((x) => x.at <= nowT + 1e-6));
+  const run = (seqRun = { stop: false, at: tl.list[i0].at, c: list[i0], v: null });
   const stage = $('#seqStage'), veil = stage.querySelector('.veil');
   let [cur, nxt] = stage.querySelectorAll('video');
+  nxt.style.opacity = 0;
   let au = stage.querySelector('audio');
   if (opt.music) {
     if (musicOf !== opt.music) { if (musicUrl) URL.revokeObjectURL(musicUrl); musicUrl = URL.createObjectURL(opt.music); musicOf = opt.music; }
     if (!au) au = stage.appendChild(document.createElement('audio'));
-    au.src = musicUrl; au.volume = Math.min(1, opt.vol / 100); au.currentTime = 0;
+    if (au.dataset.src !== musicUrl) { au.src = musicUrl; au.dataset.src = musicUrl; }
+    au.volume = Math.min(1, opt.vol / 100);
+    au.currentTime = nowT;
   }
-  run.tick = setInterval(() => { if (run.v) { nowT = run.at + run.v.currentTime - run.c.start; showPos(); paintLayers(); } }, 50);
-  await prep(cur, list[0]);
+  syncCtl();
+  run.tick = setInterval(() => { if (run.v) { nowT = Math.min(tl.total, run.at + run.v.currentTime - run.c.start); syncCtl(); paintLayers(); } }, 50);
+  await prep(cur, list[i0], list[i0].start + nowT - tl.list[i0].at);
   if (run.stop) return;
   cur.style.opacity = 1;
   playSafe(cur);
   if (opt.music) playSafe(au);
-  for (let i = 0; i < list.length && !run.stop; i++) {
+  for (let i = i0; i < list.length && !run.stop; i++) {
     const c = list[i], n = list[i + 1];
     Object.assign(run, { c, v: cur, at: tl.list[i].at });
     const ready = n ? prep(nxt, n) : null; // load the next clip while this one plays
     const d = n && c.trans !== 'cut' ? Math.min(+opt.trSec, (c.end - c.start) / 2, (n.end - n.start) / 2) : 0;
-    await until(run, () => cur.currentTime >= c.end - d || cur.ended);
-    if (run.stop || !n) break;
+    await until(run, () => cur.currentTime >= c.end - d || cur.ended || cur.error);
+    if (run.stop) break;
+    if (!n) { nowT = tl.total; break; }
     await ready;
     if (run.stop) break;
     playSafe(nxt);
@@ -640,7 +653,7 @@ $('#seqPlay').addEventListener('click', async () => {
     [cur, nxt] = [nxt, cur];
   }
   if (seqRun === run) stopSeq();
-});
+}
 
 /* ---------- text templates on the preview player: tap/drag to place, size slider, show time on the whole video ---------- */
 // x, y = centre of the text as a share of the frame; size = letter height as a share of the short side
@@ -692,8 +705,43 @@ const paintLayer = (o) => layerCanvas(o, ...dims('720'), o.cv).then(paintLayers)
 function paintLayers() {
   texts.forEach((o) => { o.cv.hidden = !o.text.trim() || !((!seqRun && o === curT) || (nowT >= o.t0 && nowT < o.t1)); });
 }
-const showPos = () => { $('#seqPos').value = nowT; $('#seqPosV').textContent = sec(nowT); };
+// the media element on screen: the clip being cut, the finished video, or null for the whole preview
+const media = () => (view === 'clip' && sel ? sel.frame.querySelector('video') : view === 'result' ? $('#outVideo') : null);
+const showPos = () => syncCtl();
+function syncCtl() {
+  const m = media(), playing = m ? !m.paused && !m.ended : !!seqRun;
+  const total = m ? (isFinite(m.duration) ? m.duration : 0) : timeline().total, at = m ? m.currentTime : nowT;
+  const b = $('#cPlay');
+  b.textContent = playing ? '⏸' : '▶';
+  b.ariaLabel = playing ? '멈추기' : '재생';
+  b.classList.toggle('on', playing);
+  $('#seqPos').max = total.toFixed(2);
+  $('#seqPos').value = at;
+  $('#seqPosV').textContent = `${at.toFixed(1)} / ${total.toFixed(1)}초`;
+}
+function togglePlay() {
+  if (busy) return;
+  const m = media();
+  if (m) { if (m.paused || m.ended) m.play().catch(() => {}); else m.pause(); }
+  else if (seqRun) stopSeq();
+  else playSeq();
+  syncCtl();
+}
+$('#cPlay').addEventListener('click', togglePlay);
+$('#cHome').addEventListener('click', () => {
+  const m = media();
+  if (m) m.currentTime = 0; else { stopSeq(); showAt(0); }
+  syncCtl();
+});
+setInterval(() => { if (!seqRun) syncCtl(); }, 200); // video clocks run on their own; keep the bar honest
+// tapping the screen plays / pauses (unless it is placing a text)
+$('.screen').addEventListener('click', () => { if (!(curT && view === 'seq')) togglePlay(); });
+addEventListener('keydown', (e) => {
+  if (e.code !== 'Space' || /INPUT|TEXTAREA|SELECT|BUTTON/.test(document.activeElement.tagName) || $('dialog[open]')) return;
+  e.preventDefault(); togglePlay();
+});
 // shows the frame at time t of the joined video in the preview player
+let showTok = 0;
 async function showAt(t) {
   const { list, total } = timeline();
   if (!list.length) return;
@@ -701,12 +749,12 @@ async function showAt(t) {
   showPos(); paintLayers();
   const e = list.findLast((x) => x.at <= nowT + 1e-6) || list[0];
   const [v, v2] = $('#seqStage').querySelectorAll('video');
+  const tok = ++showTok;
   v2.style.opacity = 0;
-  await prep(v, e.c);
-  v.currentTime = Math.min(e.c.end, e.c.start + nowT - e.at);
-  v.style.opacity = 1;
+  await prep(v, e.c, Math.min(e.c.end, e.c.start + nowT - e.at));
+  if (tok === showTok && !seqRun) v.style.opacity = 1;
 }
-$('#seqPos').addEventListener('input', (e) => { stopSeq(); showAt(+e.target.value); });
+$('#seqPos').addEventListener('input', (e) => { const m = media(); if (m) m.currentTime = +e.target.value; else { stopSeq(); showAt(+e.target.value); } });
 
 $('#tplRow').innerHTML = Object.entries(TPL).map(([k, t]) => `<button data-tpl="${k}" style="font-family:${t.font}">${t.name}</button>`).join('');
 $('#lyTpl').innerHTML = Object.entries(TPL).map(([k, t]) => `<option value="${k}">${t.name}</option>`).join('');
@@ -823,10 +871,11 @@ async function make(sample) {
       }
       const overlays = [];
       for (const [k, o] of texts.entries()) {
-        if (!o.text.trim() || o.t1 <= o.t0) continue;
+        const t1 = Math.min(o.t1, timeline().total);
+        if (!o.text.trim() || t1 - o.t0 < 0.05) continue;
         const cv = await layerCanvas(o, W, H);
         const blob = await new Promise((r) => cv.toBlob(r, 'image/png'));
-        overlays.push({ path: `ly${k}.png`, t0: o.t0, t1: o.t1 });
+        overlays.push({ path: `ly${k}.png`, t0: o.t0, t1 });
         await ff.writeFile(`ly${k}.png`, new Uint8Array(await blob.arrayBuffer()));
       }
       const music = opt.music ? { path: `${dir}/music${ext(opt.music.name)}`, vol: opt.vol / 100 } : null;
@@ -852,7 +901,7 @@ async function make(sample) {
   } catch (err) {
     console.error(err);
     resetEngine(); // a crashed (out of memory) engine can't be reused
-    say('만들기에 실패했어요. 영상이 길거나 기기 메모리가 부족할 수 있어요. 3번에서 "빠르게 720p"를 고르거나 영상을 짧게 잘라서 다시 해 보세요.');
+    say('만들기에 실패했어요. 영상이 길거나 기기 메모리가 부족할 수 있어요. 5번 모양 칸에서 "빠르게 720p"를 고르거나 영상을 짧게 잘라서 다시 해 보세요.');
     bar(0);
   } finally {
     onLog = null;
@@ -877,7 +926,7 @@ function showResult(blob, secs, sample) {
   say(`${sample ? '샘플(720p) ' : ''}완성! (${(blob.size / 1048576).toFixed(1)} MB, ${Math.round(secs)}초 걸림)`);
   $('#saveRow').hidden = false;
   setView('result');
-  $('#seq').scrollIntoView({ behavior: 'smooth' });
+  $('#saveRow').scrollIntoView({ behavior: 'smooth', block: 'center' }); // the viewer box itself has no layout on phones
 }
 
 /* ---------- visitor / video counters ----------
@@ -931,9 +980,9 @@ function setView(v) {
   $('#clipSlot').hidden = v !== 'clip';
   $('#result').hidden = v !== 'result';
   $('#empty').hidden = has || v === 'result';
-  $('#timebar').hidden = v !== 'seq' || !has;
-  $('#seqPlay').hidden = v === 'result';
+  $('#ctlbar').hidden = !has && v !== 'result';
   $('#backEdit').hidden = v !== 'result';
+  syncCtl();
   $('#viewName').textContent = v === 'result' ? '✨ 완성된 영상' : v === 'clip' ? `✂️ ${clips.indexOf(sel) + 1}번 영상 자르기` : '👀 미리보기';
 }
 const refreshView = () => setView(view === 'result' ? 'result' : tab === 'cut' && sel ? 'clip' : 'seq');

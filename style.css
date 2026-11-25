@@ -22,8 +22,9 @@ h1 { font: 900 32px TITLE, BHS, sans-serif; margin: 0; color: var(--accent); }
 
 /* ---- the one viewer ---- */
 .viewer { position: sticky; top: 12px; background: var(--card); border-radius: 24px; padding: 16px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 10px; }
-.screenbar { display: flex; justify-content: center; }
-.screen { position: relative; height: min(56vh, 560px); aspect-ratio: 9/16; max-width: 100%; background: #1d1a17; border-radius: 18px; overflow: hidden; }
+.screenbar { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.screenbar .ctlbar { align-self: stretch; }
+.screen { position: relative; height: min(50vh, 540px); aspect-ratio: 9/16; max-width: 100%; background: #1d1a17; border-radius: 18px; overflow: hidden; }
 body.wide .screen { height: auto; width: 100%; aspect-ratio: 16/9; }
 .stage, .clipslot, .outbox { position: absolute; inset: 0; }
 .stage video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; }
@@ -195,8 +196,11 @@ dialog h3 { margin: 0 0 4px; }
   .viewer > :not(.screenbar) { margin: 0 4px; }
   .viewer { display: contents; }
   .screenbar { position: sticky; top: 0; z-index: 20; background: var(--bg); padding: 6px 0; margin: 0 -12px; }
-  .screen { height: 40vh; }
-  body.wide .screen { height: auto; width: min(100%, calc(40vh * 16 / 9)); }
+  .screen { height: 34vh; }
+  .screenbar { padding: 6px 12px 8px; box-shadow: 0 6px 10px -8px rgba(120,70,20,.35); }
+  .tabs { scroll-margin-top: calc(34vh + 90px); }
+  .btns .btn, .navrow .btn { font-size: 16px; padding: 8px 6px; }
+  body.wide .screen { height: auto; width: min(100%, calc(34vh * 16 / 9)); }
   .viewname { margin-top: -4px; }
   .panel { margin-top: 6px; }
   .pane { padding: 16px; }
@@ -204,3 +208,19 @@ dialog h3 { margin: 0 0 4px; }
   .tabs button span { font-size: 14px; }
   h1 { font-size: 26px; }
 }
+
+/* controls under the screen */
+.ctlbar { display: flex; align-items: center; gap: 8px; background: var(--soft); border-radius: 18px; padding: 6px 10px; }
+.ctlbar input { flex: 1; min-width: 0; }
+.ctlbar b { font-size: 15px; white-space: nowrap; min-width: 88px; text-align: right; }
+.cbtn { flex: none; width: 48px; height: 48px; border: 0; border-radius: 50%; background: #fff; font-size: 20px; box-shadow: 0 3px 0 var(--line); display: grid; place-items: center; padding: 0; }
+.cbtn.play { width: 58px; height: 58px; background: var(--accent); color: #fff; font-size: 24px; box-shadow: 0 4px 0 #d9502a; }
+.cbtn.play.on { background: var(--accent2); box-shadow: 0 4px 0 #2a6ad1; }
+.screen { cursor: pointer; }
+.panel .frame { display: none; } /* a clip's video only ever shows in the viewer */
+.navrow { display: flex; gap: 8px; margin-top: 18px; }
+.navrow .btn { flex: 1; margin-top: 0; }
+.prev { background: #fff; border: 2px solid var(--line); }
+.finetr { display: flex; align-items: center; gap: 8px; margin: 10px 0; }
+.finetr input { flex: 1; }
+.finetr b { min-width: 60px; text-align: right; }
