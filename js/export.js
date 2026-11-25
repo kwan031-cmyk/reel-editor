@@ -1,3 +1,4 @@
+import { t } from './i18n.js';
 import { spotsInRange } from './clips.js';
 import { cancelled, engine, ext, fitPicture, lock, logs, probe, resetEngine, secOf, videoLen, withMount } from './engine.js';
 import { counter, showCount } from './extras.js';
@@ -14,7 +15,7 @@ export const bar = (p) => { $('#barFill').style.width = `${Math.round(p * 100)}%
 $('#make').addEventListener('click', () => make(false));
 export async function make(sample) {
   const list = st.clips.filter((c) => c.dur > 0);
-  if (!list.length) { alert('먼저 1번에서 영상을 골라 주세요.'); return; }
+  if (!list.length) { alert(t('먼저 1번에서 영상을 골라 주세요.')); return; }
   lock(true);
   $('#prog').hidden = false; $('#saveRow').hidden = true; bar(0);
   $('#prog').scrollIntoView({ behavior: 'smooth', block: 'center' });

@@ -1,3 +1,4 @@
+import { t } from './i18n.js';
 import { stopSeq, syncCtl } from './preview.js';
 import { $, st } from './state.js';
 import { selectText } from './text.js';
@@ -41,7 +42,7 @@ document.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click'
 // 새로 만들기: everything lives in this page only, so a fresh page is a clean start (the engine stays in the browser cache)
 document.querySelectorAll('.newProj').forEach((b) => b.addEventListener('click', () => {
   if (st.busy) return;
-  if (st.clips.length && !confirm('지금 만든 내용(영상·글자·음악)이 모두 지워져요. 저장 안 한 영상은 사라져요.\n새로 만들까요?')) return;
+  if (st.clips.length && !confirm(t('지금 만든 내용(영상·글자·음악)이 모두 지워져요. 저장 안 한 영상은 사라져요.\n새로 만들까요?'))) return;
   location.reload();
 }));
 $('#backEdit').addEventListener('click', () => { view = 'seq'; refreshView(); });

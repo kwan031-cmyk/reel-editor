@@ -1,3 +1,4 @@
+import { t } from './i18n.js';
 import { dropClips, newClip, renderList, sec } from './clips.js';
 import { analyze, cancelled, engine, ext, fitPicture, lock, logs, resetEngine, withMount } from './engine.js';
 import { bar, make, say } from './export.js';
@@ -13,7 +14,7 @@ let cands = [], hlSrc = []; // candidate scenes and the original clips they come
 // looks through the original videos and fills the scene list (recommended scenes come pre-chosen)
 async function findHighlights() {
   const src = (st.backup || st.clips).filter((c) => c.dur > 0); // always search the original videos
-  if (!src.length) { alert('먼저 1번에서 영상을 골라 주세요.'); return false; }
+  if (!src.length) { alert(t('먼저 1번에서 영상을 골라 주세요.')); return false; }
   await engine(hlSay);
   for (const [k, c] of src.entries())
     await analyze(c, (p) => hlSay(`영상 살펴보는 중… ${k + 1}/${src.length}번 (${Math.round(p * 100)}%)`));
@@ -184,7 +185,7 @@ function arrange(on) {
 }
 $('#hlMake').addEventListener('click', async () => {
   const on = cands.filter((k) => k.on);
-  if (!on.length) { alert('샘플에 쓸 장면을 하나 이상 골라 주세요.'); return; }
+  if (!on.length) { alert(t('샘플에 쓸 장면을 하나 이상 골라 주세요.')); return; }
   if (st.busy) return;
   stopCand();
   arrange(on);

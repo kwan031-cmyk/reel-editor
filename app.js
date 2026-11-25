@@ -1,4 +1,5 @@
 // 숏폼 뚝딱: each step lives in its own file under js/; this file only starts the app.
+import './js/i18n.js';     // language picker (first, so it sees every text)
 import './js/state.js';     // shared settings and state
 import './js/engine.js';    // ffmpeg engine, file probing, clip analysis, busy lock + 취소
 import './js/clips.js';     // 1·2: add clips, cut cards, loud spots, transitions, order strip, options, music

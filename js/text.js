@@ -1,3 +1,4 @@
+import { t } from './i18n.js';
 import { seqRun, showAt, stopSeq, timeline } from './preview.js';
 import { $, dims, st } from './state.js';
 
@@ -66,7 +67,7 @@ $('#tplRow').addEventListener('click', (e) => {
   if (!b || st.busy) return;
   const T = TPL[b.dataset.tpl], { total } = timeline();
   const t0 = +clamp(st.nowT, 0, Math.max(0, total - 1)).toFixed(1);
-  const o = { text: T.sample, tpl: b.dataset.tpl, x: 0.5, y: T.y, size: T.size, t0, t1: +Math.min(total, t0 + 3).toFixed(1), cv: document.createElement('canvas') };
+  const o = { text: t(T.sample), tpl: b.dataset.tpl, x: 0.5, y: T.y, size: T.size, t0, t1: +Math.min(total, t0 + 3).toFixed(1), cv: document.createElement('canvas') };
   if (o.t1 <= o.t0) o.t1 = o.t0 + 3; // no clips measured yet
   o.cv.className = 'ly';
   $('#seqStage').append(o.cv);

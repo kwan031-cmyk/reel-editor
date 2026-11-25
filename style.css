@@ -25,7 +25,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 .top { max-width: 1180px; margin: 0 auto; padding: 22px 20px 4px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 10px; }
 .top p { flex-basis: 100%; }
-.top .newProj { min-height: 40px; padding: 0 14px; border: 1px solid var(--edge); border-radius: 999px; background: rgba(255,255,255,.8); font-size: 14px; font-weight: 700; color: inherit; cursor: pointer; }
+.top .topbtns { display: flex; gap: 8px; align-items: center; }
+#lang { min-height: 40px; padding: 0 10px; border: 1px solid var(--edge); border-radius: 999px; background: rgba(255,255,255,.8); font-size: 14px; font-weight: 700; color: inherit; }
+.top .newProj { white-space: nowrap; min-height: 40px; padding: 0 14px; border: 1px solid var(--edge); border-radius: 999px; background: rgba(255,255,255,.8); font-size: 14px; font-weight: 700; color: inherit; cursor: pointer; }
 .finish .newProj { margin-top: 8px; }
 h1 { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -.8px; }
 .top p { color: var(--sub); margin: 2px 0 0; font-size: 15px; }

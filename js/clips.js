@@ -1,3 +1,4 @@
+import { t } from './i18n.js';
 import { analyze, cancelled, ext, lock, probe, resetEngine, withMount } from './engine.js';
 import { seqRun, showAt, timeline } from './preview.js';
 import { $, MIN, TRANS, opt, st } from './state.js';
@@ -95,7 +96,7 @@ function makeCard(c) {
       try {
         await analyze(c, (p) => { b.textContent = typeof p === 'number' ? `🔊 소리 살펴보는 중… ${Math.round(p * 100)}%` : p; });
         drawSound(c);
-      } catch (err) { console.error(err); resetEngine(); if (!cancelled) alert('소리를 살펴보지 못했어요. 다시 눌러 주세요.'); }
+      } catch (err) { console.error(err); resetEngine(); if (!cancelled) alert(t('소리를 살펴보지 못했어요. 다시 눌러 주세요.')); }
       finally { b.textContent = '🔊 튀는 소리 다시 보기'; lock(false); }
     }
     if (a === 'up' && i > 0) [st.clips[i - 1], st.clips[i]] = [st.clips[i], st.clips[i - 1]];
