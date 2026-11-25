@@ -99,7 +99,7 @@ run('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'color=c=red@0.5:s=360x640,fo
 run('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-t', '3', '-i', 'sine=f=440', 'm.m4a']);
 
 const base = [
-  { path: `${RAW}/KakaoTalk_20261109_124918431.mp4`, start: 1, dur: 1.5, hasAudio: true, textPath: 't.png', dips: [{ t0: 0.2, t1: 0.6, gain: 0.2 }] }, // 406x720 h264
+  { path: `${RAW}/KakaoTalk_20261109_124918431.mp4`, start: 1, dur: 1.5, hasAudio: true, dips: [{ t0: 0.2, t1: 0.6, gain: 0.2 }] }, // 406x720 h264
   { path: `${RAW}/KakaoTalk_20261109_124933061.mp4`, start: 2, dur: 2, hasAudio: false },  // hevc, forced silence path
   { path: `${RAW}/KakaoTalk_20261109_124918431.mp4`, start: 5, dur: 1, hasAudio: true },
 ];
@@ -131,7 +131,7 @@ for (const c of cases) {
 }
 // timed text: shows only inside its window (frame differs from the same render without it at 1.0s, matches at 2.6s)
 {
-  const clips = base.map((b) => ({ ...b, textPath: undefined, trans: 'cut' }));
+  const clips = base.map((b) => ({ ...b, trans: 'cut' }));
   const mk = (out, overlays) => run('ffmpeg', buildArgs({ clips, overlays, music: null, keepOrig: false, fit: 'cover', W: 360, H: 640, out }).args);
   mk('plain.mp4', []);
   mk('timed.mp4', [{ path: 't.png', t0: 0.5, t1: 2 }, { path: 't.png', t0: 3.5, t1: 4 }]);

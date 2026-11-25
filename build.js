@@ -1,6 +1,6 @@
 // One ffmpeg command: per clip trim + 9:16 fit + text overlay + loud-spot dips, joined with cuts or
 // transitions, then optional music.
-// clips: [{ path, start, dur, hasAudio, textPath?, trans? (to next clip, xfade name or 'cut'), dips?: [{t0,t1,gain}] }]
+// clips: [{ path, start, dur, hasAudio, trans? (to next clip, xfade name or 'cut'), dips?: [{t0,t1,gain}] }]
 // music: { path, vol? (1 = original loudness) } | null
 // overlays: [{ path (full-frame transparent png), t0, t1 }] shown on the joined video between t0 and t1 seconds
 export const TRANS_SEC = 0.4;
@@ -49,13 +49,7 @@ export function buildArgs({ clips, overlays = [], music, keepOrig, fit, W, H, ou
     const vi = n++;
     // settb: xfade needs identical timebases on both sides
     // tpad: if the picture runs out early, hold its last frame so the clip keeps its length and sound stays in sync
-    let v = `[${vi}:v]${scale},setsar=1,fps=30,settb=AVTB,tpad=stop_mode=clone:stop_duration=${t},trim=duration=${t}`;
-    if (c.textPath) {
-      a.push('-i', c.textPath);
-      const ti = n++;
-      f.push(`${v}[b${i}]`);
-      v = `[b${i}][${ti}:v]overlay=0:0`;
-    }
+    const v = `[${vi}:v]${scale},setsar=1,fps=30,settb=AVTB,tpad=stop_mode=clone:stop_duration=${t},trim=duration=${t}`;
     f.push(`${v},format=yuv420p[v${i}]`);
     if (keepOrig) {
       let ai = vi;

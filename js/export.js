@@ -67,7 +67,6 @@ export async function make(sample) {
       const code = await ff.exec(args);
       if (code !== 0) throw new Error(logs.slice(from).slice(-8).join('\n'));
       const out = await ff.readFile('out.mp4');
-      for (const it of items) if (it.textPath) await ff.deleteFile(it.textPath).catch(() => {});
       for (const o of overlays) await ff.deleteFile(o.path).catch(() => {});
       await ff.deleteFile('out.mp4').catch(() => {});
       return out;
