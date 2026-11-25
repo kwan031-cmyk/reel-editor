@@ -5,6 +5,36 @@
 // overlays: [{ path (full-frame transparent png), t0, t1 }] shown on the joined video between t0 and t1 seconds
 export const TRANS_SEC = 0.4;
 
+// Text effects. T = seconds since the text appeared, D = how long it shows.
+// in/out: fade seconds; dx, dy: offset as a share of the frame; s: scale; blink: on 0.55 s of every 0.8 s.
+// Expressions use ffmpeg syntax; the preview evaluates the very same strings (fxAt), so both move alike.
+export const FX = {
+  none: {},
+  fade: { in: 0.35, out: 0.35 },
+  up: { in: 0.3, out: 0.3, dy: '0.08*pow(1-clip(T/0.45,0,1),3)' },
+  left: { out: 0.3, dx: '-0.7*pow(1-clip(T/0.45,0,1),3)' },
+  pop: { in: 0.12, out: 0.25, s: 'if(lt(T,0.25),0.3+0.85*T/0.25,if(lt(T,0.4),1.15-T+0.25,1))' },
+  bounce: { dy: '-0.025*abs(sin(2*PI*1.6*T))' },
+  shake: { dx: '0.012*sin(2*PI*4*T)' },
+  blink: { blink: true },
+};
+const fns = { clip: (v, a, b) => Math.min(b, Math.max(a, v)), pow: Math.pow, abs: Math.abs, sin: Math.sin,
+  lt: (a, b) => +(a < b), mod: (a, b) => a - b * Math.floor(a / b), if: (c, a, b) => (c ? a : b), PI: Math.PI };
+const compiled = new Map();
+const ev = (e, T, D) => {
+  if (!compiled.has(e)) compiled.set(e, new Function('f', 'T', 'D', `with (f) { return ${e.replace(/\bif\(/g, 'f.if(')}; }`));
+  return compiled.get(e)(fns, T, D);
+};
+// the effect's state at T seconds after the text appeared: { a (opacity), dx, dy, s }
+export function fxAt(name, T, D) {
+  const fx = FX[name] || FX.none;
+  let a = 1;
+  if (fx.in) a *= fns.clip(T / fx.in, 0, 1);
+  if (fx.out) a *= fns.clip((D - T) / fx.out, 0, 1);
+  if (fx.blink) a *= fns.lt(fns.mod(T, 0.8), 0.55);
+  return { a, dx: fx.dx ? ev(fx.dx, T, D) : 0, dy: fx.dy ? ev(fx.dy, T, D) : 0, s: fx.s ? ev(fx.s, T, D) : 1 };
+}
+
 export function buildArgs({ clips, overlays = [], music, keepOrig, fit, W, H, out = 'out.mp4', trSec = TRANS_SEC }) {
   const a = ['-hide_banner'], f = [];
   let n = 0;
@@ -54,8 +84,23 @@ export function buildArgs({ clips, overlays = [], music, keepOrig, fit, W, H, ou
   }
 
   overlays.forEach((o, k) => {
-    a.push('-i', o.path);
-    f.push(`${vc}[${n++}:v]overlay=0:0:enable='between(t,${o.t0.toFixed(2)},${o.t1.toFixed(2)})'[vo${k}]`);
+    const t0 = o.t0.toFixed(2), t1 = o.t1.toFixed(2), on = `between(t,${t0},${t1})`;
+    const fx = FX[o.fx] || FX.none;
+    if (!o.w || o.fx == null || o.fx === 'none') { // still picture
+      a.push('-i', o.path);
+      f.push(`${vc}[${n++}:v]overlay=${o.x || 0}:${o.y || 0}:enable='${on}'[vo${k}]`);
+    } else { // the text box as a moving stream on the joined video's clock
+      a.push('-loop', '1', '-framerate', '30', '-t', (o.t1 + 0.1).toFixed(2), '-i', o.path);
+      const ex = (e) => e.replaceAll('T', `(t-${t0})`).replaceAll('D', (o.t1 - o.t0).toFixed(2));
+      let s = `[${n++}:v]format=rgba`;
+      if (fx.in) s += `,fade=t=in:st=${t0}:d=${fx.in}:alpha=1`;
+      if (fx.out) s += `,fade=t=out:st=${Math.max(o.t0, o.t1 - fx.out).toFixed(2)}:d=${fx.out}:alpha=1`;
+      if (fx.s) s += `,scale=w='max(2,trunc(${o.w}*${ex(fx.s)}/2)*2)':h='max(2,trunc(${o.h}*${ex(fx.s)}/2)*2)':eval=frame`;
+      f.push(`${s}[ly${k}]`);
+      const x = `${o.x}+(${o.w}-w)/2+${W}*(${ex(fx.dx || '0')})`, y = `${o.y}+(${o.h}-h)/2+${H}*(${ex(fx.dy || '0')})`;
+      const en = fx.blink ? `${on}*lt(mod(t-${t0},0.8),0.55)` : on;
+      f.push(`${vc}[ly${k}]overlay=x='${x}':y='${y}':eval=frame:enable='${en}'[vo${k}]`);
+    }
     vc = `[vo${k}]`;
   });
 

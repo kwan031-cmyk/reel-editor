@@ -6,7 +6,7 @@ import { mkdtempSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import assert from 'node:assert/strict';
-import { buildArgs, TRANS_SEC } from '../build.js';
+import { buildArgs, TRANS_SEC, FX, fxAt } from '../build.js';
 import { envelope, findSpikes, motion, light, scores, pickHighlights, candidates, STEP } from '../analyze.js';
 
 /* ---- analysis helpers ---- */
@@ -141,6 +141,29 @@ for (const c of cases) {
   assert.ok(diff(2.6) < 8, `overlay gone at 2.6s (${diff(2.6)})`);
   assert.ok(diff(3.7) > 30, `second overlay visible at 3.7s (${diff(3.7)})`);
   console.log('OK timed text');
+
+  // text effects: a 120x60 box at (120,290) shown 0.5-3.5s; every effect renders, and where it is matches fxAt
+  run('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', 'color=c=0xffff00:s=120x60,format=rgba', '-frames:v', '1', 'box.png']);
+  const box = { path: 'box.png', t0: 0.5, t1: 3.5, x: 120, y: 290, w: 120, h: 60 };
+  run('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', 'color=c=black:s=360x640:r=30:d=4', 'black.mp4']);
+  const black = [{ path: 'black.mp4', start: 0, dur: 4, hasAudio: false }];
+  const solid = (out, fx) => run('ffmpeg', buildArgs({ clips: black, overlays: [{ ...box, fx }], music: null, keepOrig: false, fit: 'cover', W: 360, H: 640, out }).args);
+  // share of yellow pixels in a row band / column band around where fxAt says the box is
+  const frame = (file, t) => execFileSync('ffmpeg', ['-v', 'error', '-ss', String(t), '-i', file, '-frames:v', '1', '-f', 'rawvideo', '-pix_fmt', 'gray', '-'], { cwd: dir });
+  const yellowAt = (buf, x, y) => buf[Math.round(y) * 360 + Math.round(x)] > 150;
+  for (const fx of Object.keys(FX)) {
+    solid(`fx_${fx}.mp4`, fx);
+    for (const T of [0.05, 0.2, 0.6, 1.3]) {
+      const f = fxAt(fx, T, 3), img = frame(`fx_${fx}.mp4`, 0.5 + T + 0.017);
+      const cx = 180 + f.dx * 360, cy = 320 + f.dy * 640;
+      if (f.a > 0.9 && f.s > 0.5 && cx > 2 && cx < 358) assert.ok(yellowAt(img, cx, cy), `${fx} at T=${T}: box centre should be at ${cx.toFixed(0)},${cy.toFixed(0)}`);
+      if (f.a === 0) assert.ok(!yellowAt(img, 180, 320), `${fx} at T=${T}: box should be hidden`);
+    }
+  }
+  // pop: small at first, full size later
+  const pop = (t) => { const img = frame('fx_pop.mp4', t); let n = 0; for (let x = 0; x < 360; x++) n += yellowAt(img, x, 320); return n; };
+  assert.ok(pop(0.5 + 0.08) < pop(0.5 + 1), `pop grows ${pop(0.58)} -> ${pop(1.5)}`);
+  console.log('OK text effects', Object.keys(FX).join(' '));
 }
 // a clip whose picture ends before its sound: the joined video still has picture for the whole length
 {

@@ -46,9 +46,11 @@ export async function make(sample) {
       for (const [k, o] of texts.entries()) {
         const t1 = Math.min(o.t1, timeline().total);
         if (!o.text.trim() || t1 - o.t0 < 0.05) continue;
-        const cv = await layerCanvas(o, W, H);
+        const full = await layerCanvas(o, W, H), b = full.bb;
+        const cv = Object.assign(document.createElement('canvas'), { width: b.w, height: b.h });
+        cv.getContext('2d').drawImage(full, b.x, b.y, b.w, b.h, 0, 0, b.w, b.h);
         const blob = await new Promise((r) => cv.toBlob(r, 'image/png'));
-        overlays.push({ path: `ly${k}.png`, t0: o.t0, t1 });
+        overlays.push({ path: `ly${k}.png`, t0: o.t0, t1, ...b, fx: o.fx || 'none' });
         await ff.writeFile(`ly${k}.png`, new Uint8Array(await blob.arrayBuffer()));
       }
       const music = opt.music ? { path: `${dir}/music${ext(opt.music.name)}`, vol: opt.vol / 100 } : null;

@@ -1,6 +1,7 @@
 import { t } from './i18n.js';
 import { seqRun, showAt, stopSeq, timeline } from './preview.js';
 import { $, dims, st } from './state.js';
+import { FX, fxAt } from '../build.js';
 
 /* ---------- text drawn on a transparent canvas: same picture for preview and for the final video ---------- */
 function wrap(g, text, maxW) {
@@ -52,12 +53,41 @@ export async function layerCanvas(o, W, H, cv = document.createElement('canvas')
     if (T.stroke) { g.lineWidth = px * 0.18; g.strokeStyle = T.stroke; g.strokeText(l, cx, y); }
     g.fillStyle = o.fill || T.fill; g.fillText(l, cx, y);
   });
+  // the drawn area (+ room for outline and shadow), whole even pixels: effects move and scale only this box
+  const bw = Math.max(...lines.map((l) => g.measureText(l).width)) + (T.box ? px * 0.8 : 0) + px * 0.8;
+  const bh = lines.length * lh + px * 0.8;
+  const ev = (v) => Math.max(2, Math.round(v / 2) * 2);
+  const x = ev(clamp(cx - bw / 2, 0, W - 2)), y = ev(clamp(cy - bh / 2, 0, H - 2));
+  cv.bb = { x, y, w: ev(Math.min(bw, W - x)), h: ev(Math.min(bh, H - y)) };
+  o.origin = `${(cx / W) * 100}% ${(cy / H) * 100}%`;
   return cv;
 }
 export const paintLayer = (o) => layerCanvas(o, ...dims('720'), o.cv).then(paintLayers);
 // while playing: only texts whose time has come; while stopped: also the one being edited
 export function paintLayers() {
-  texts.forEach((o) => { o.cv.hidden = !o.text.trim() || !((!seqRun && o === curT) || (st.nowT >= o.t0 && st.nowT < o.t1)); });
+  texts.forEach((o) => {
+    o.cv.hidden = !o.text.trim() || !((!seqRun && o === curT) || (st.nowT >= o.t0 && st.nowT < o.t1));
+    if (!o.cv.hidden && !(o.demoUntil > performance.now())) fxStyle(o, st.nowT - o.t0);
+  });
+}
+// draw the effect at T seconds after the text appears (held still while it is being edited)
+function fxStyle(o, T) {
+  const editing = !seqRun && o === curT && !(o.demoUntil > performance.now());
+  const f = editing ? { a: 1, dx: 0, dy: 0, s: 1 } : fxAt(o.fx || 'none', T, o.t1 - o.t0);
+  o.cv.style.opacity = f.a;
+  o.cv.style.transformOrigin = o.origin || '50% 50%';
+  o.cv.style.transform = `translate(${f.dx * 100}%, ${f.dy * 100}%) scale(${f.s})`;
+}
+// shows the chosen effect once on the preview (up to 1.6 s)
+function demoFx(o) {
+  const t0 = performance.now(), D = Math.min(1.6, o.t1 - o.t0);
+  o.demoUntil = t0 + D * 1000; // ends by time even if animation frames stop (hidden page)
+  const step = () => {
+    const T = (performance.now() - t0) / 1000;
+    if (T >= D || o !== curT) { o.demoUntil = 0; fxStyle(o, 0); return; }
+    fxStyle(o, T); requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
 }
 
 $('#tplRow').innerHTML = Object.entries(TPL).map(([k, t]) => `<button data-tpl="${k}" style="font-family:${t.font}">${t.name}</button>`).join('');
@@ -108,6 +138,9 @@ function setTimes(o, t0, t1) {
 $('#lyText').addEventListener('input', (e) => { curT.text = e.target.value; paintLayer(curT); renderLayerList(); });
 $('#lyTpl').addEventListener('change', (e) => { curT.tpl = e.target.value; curT.font = curT.fill = null; paintPicks(curT); paintLayer(curT); renderLayerList(); });
 const FONTS = { BHS: '굵게', DOH: '깔끔', JUA: '귀엽게', PEN: '손글씨' };
+const FX_NAMES = { none: '그대로', fade: '스르륵', up: '아래에서 쏙', left: '옆에서 휙', pop: '뿅', bounce: '통통', shake: '흔들흔들', blink: '깜빡깜빡' };
+$('#lyFx').innerHTML = Object.keys(FX).map((k) => `<button data-fx="${k}">${FX_NAMES[k]}</button>`).join('');
+$('#lyFx').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b || !curT) return; curT.fx = b.dataset.fx; paintPicks(curT); demoFx(curT); });
 const COLORS = ['#ffffff', '#ffe14d', '#ff5a5f', '#4dd2ff', '#7cfc8a', '#111111'];
 $('#lyFont').innerHTML = Object.entries(FONTS).map(([k, n]) => `<button data-f="${k}" style="font-family:${k}">${n}</button>`).join('');
 $('#lyColor').innerHTML = COLORS.map((c) => `<button data-c="${c}" style="background:${c}" aria-label="색 ${c}"></button>`).join('');
@@ -115,6 +148,7 @@ function paintPicks(o) {
   const T = TPL[o.tpl];
   $('#lyFont').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.f === (o.font || T.font)));
   $('#lyColor').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.c === (o.fill || T.fill)));
+  $('#lyFx').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.fx === (o.fx || 'none')));
 }
 $('#lyFont').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b || !curT) return; curT.font = b.dataset.f; paintPicks(curT); paintLayer(curT); });
 $('#lyColor').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b || !curT) return; curT.fill = b.dataset.c; paintPicks(curT); paintLayer(curT); });
