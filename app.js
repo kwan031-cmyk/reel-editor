@@ -500,10 +500,59 @@ function renderCands(list, chosen) {
     box.append(el);
     return cand;
   });
-  box.hidden = $('#hlMake').hidden = false;
+  box.hidden = $('#hlMake').hidden = $('#hlSaveBox').hidden = false;
   candInfo();
 }
 
+// each chosen highlight as its own mp4 in the chosen shape (screen fit + quality from 모양, original sound, no text)
+let hlUrls = [];
+$('#hlSave').addEventListener('click', async () => {
+  const on = cands.filter((k) => k.on).sort((a, b) => a.i - b.i || a.start - b.start);
+  if (!on.length) { alert('2번 자르기 칸에서 저장할 장면을 하나 이상 골라 주세요.'); return; }
+  if (busy) return;
+  lock(true);
+  const [W, H] = dims(opt.q);
+  const box = $('#hlFiles');
+  hlUrls.forEach((u) => URL.revokeObjectURL(u));
+  hlUrls = [];
+  box.innerHTML = '';
+  box.hidden = false;
+  $('#prog').hidden = false; bar(0);
+  const files = [];
+  try {
+    await engine(say);
+    for (const [n, k] of on.entries()) {
+      const o = hlSrc[k.i], name = 'p' + ext(o.file.name);
+      say(`장면 저장 파일 만드는 중… ${n + 1}/${on.length}`);
+      bar(n / on.length);
+      const data = await withMount([new File([o.file], name)], async (ff, dir) => {
+        const { args } = buildArgs({ clips: [{ path: `${dir}/${name}`, start: k.start, dur: k.end - k.start, hasAudio: o.ana.hasAudio }],
+          music: null, keepOrig: true, fit: opt.fit, W, H, out: 'clip.mp4' });
+        const from = logs.length;
+        if (await ff.exec(args) !== 0) throw new Error(logs.slice(from).slice(-6).join('\n'));
+        const out = await ff.readFile('clip.mp4');
+        await ff.deleteFile('clip.mp4').catch(() => {});
+        return out;
+      });
+      const fname = `하이라이트_${k.i + 1}번영상_${k.start.toFixed(1)}-${k.end.toFixed(1)}초.mp4`;
+      const blob = new Blob([data.buffer], { type: 'video/mp4' }), url = URL.createObjectURL(blob);
+      hlUrls.push(url);
+      files.push(new File([blob], fname, { type: 'video/mp4' }));
+      box.append(Object.assign(document.createElement('a'), { href: url, download: fname, className: 'btn',
+        textContent: `⬇ ${n + 1}. ${k.i + 1}번 영상 ${k.start.toFixed(1)}~${k.end.toFixed(1)}초 저장` }));
+    }
+    if (navigator.canShare?.({ files })) {
+      const b = Object.assign(document.createElement('button'), { className: 'btn cta', textContent: '📤 모두 공유 / 사진첩에 저장' });
+      b.onclick = () => navigator.share({ files }).catch(() => {});
+      box.prepend(b);
+    }
+    bar(1);
+    say(`장면 ${on.length}개 완성! 아래 버튼을 눌러 하나씩 저장해요.`);
+  } catch (err) {
+    console.error(err); resetEngine(); bar(0);
+    say('장면 파일을 만들지 못했어요. 화질을 "빠르게 720p"로 바꾸고 다시 해 보세요.');
+  } finally { lock(false); }
+});
 function arrange(on) {
   on = [...on].sort((a, b) => a.i - b.i || a.start - b.start);
   if (backup) dropClips(clips, true); // replacing an earlier sample list
