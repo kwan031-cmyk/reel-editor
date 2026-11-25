@@ -133,7 +133,7 @@ function addFiles(files) {
   }
   if (first) sel = first;
   // new files become part of the base list, so the highlight undo point no longer applies
-  if (first && backup) { dropClips(backup.filter((b) => !clips.includes(b)), true); backup = null; $('#hlUndo').hidden = $('#hlSample').hidden = true; }
+  if (first && backup) { dropClips(backup.filter((b) => !clips.includes(b)), true); backup = null; $('#hlUndo').hidden = true; }
   renderList();
 }
 
@@ -264,7 +264,7 @@ function renderList() {
     if (strip.children[k] !== node) strip.insertBefore(node, strip.children[k] || null);
   });
   strip.hidden = $('#stripHint').hidden = !clips.length;
-  $('#cutHint').textContent = clips.length ? '고칠 영상을 골라요.' : '먼저 1번에서 영상을 넣어요.';
+  $('#cutHint').hidden = clips.length > 0; // only the "add videos first" note
   $('#clipPick').replaceChildren(...clips.map((c, i) => Object.assign(document.createElement('button'), {
     type: 'button', className: c === sel ? 'on' : '', textContent: `${i + 1}번 영상`,
     onclick: () => { if (!busy) { sel = c; renderList(); } } })));
@@ -356,7 +356,8 @@ function renderTotal() {
 document.querySelectorAll('.seg').forEach((seg) => seg.addEventListener('click', (ev) => {
   const b = ev.target.closest('button');
   if (!b || busy) return;
-  seg.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
+  // every copy of a choice (the length is in 넣기 and 자르기) shows the same pick
+  document.querySelectorAll(`.seg[data-k="${seg.dataset.k}"] button`).forEach((x) => x.classList.toggle('on', x.dataset.v === b.dataset.v));
   opt[seg.dataset.k] = b.dataset.v;
   document.body.classList.toggle('contain', opt.fit === 'contain');
   document.body.classList.toggle('wide', opt.ratio === '16:9');
@@ -444,9 +445,10 @@ $('#autoBtn').addEventListener('click', async () => {
   if (!ok) return;
   arrange(cands.filter((k) => k.on));
   hlSay(`추천 장면 ${clips.length}개를 이어 붙여 영상을 만들고 있어요. 다 되면 화면에 바로 나와요.`);
+  goTab('more'); // making and saving live in the last step
   await make(false);
   hlSay($('#saveRow').hidden ? '영상을 만들지 못했어요. 🎬 영상 만들기 아래 안내를 봐 주세요.'
-    : `완성! 추천 장면 ${clips.length}개로 만든 영상이 화면에 나왔어요. 💾 저장하기를 눌러요. 고치고 싶으면 2~5번 칸에서 바꾸고 다시 만들면 돼요.`);
+    : `완성! 추천 장면 ${clips.length}개로 만든 영상이 화면에 나왔어요. 5번 모양 칸에서 💾 저장하기를 눌러요. 고치고 싶으면 2~5번 칸에서 바꾸고 다시 만들면 돼요.`);
 });
 
 const paintCand = (k) => { k.el.classList.toggle('on', k.on); k.el.querySelector('.pick').textContent = k.on ? '✔ 쓸 거예요' : '＋ 고르기'; };
@@ -480,56 +482,10 @@ function renderCands(list, chosen) {
     box.append(el);
     return cand;
   });
-  box.hidden = $('#hlMake').hidden = $('#hlSave').hidden = false;
+  box.hidden = $('#hlMake').hidden = false;
   candInfo();
 }
 
-// each chosen scene as its own mp4 in the chosen shape (screen fit + quality from step 3, original sound, no text)
-let hlUrls = [];
-$('#hlSave').addEventListener('click', async () => {
-  const on = cands.filter((k) => k.on).sort((a, b) => a.i - b.i || a.start - b.start);
-  if (!on.length) { alert('저장할 장면을 하나 이상 골라 주세요.'); return; }
-  if (busy) return;
-  lock(true);
-  const [W, H] = dims(opt.q);
-  const box = $('#hlFiles');
-  hlUrls.forEach((u) => URL.revokeObjectURL(u));
-  hlUrls = [];
-  box.innerHTML = '';
-  box.hidden = false;
-  const files = [];
-  try {
-    await engine(hlSay);
-    for (const [n, k] of on.entries()) {
-      const o = hlSrc[k.i], name = 'p' + ext(o.file.name);
-      hlSay(`장면 클립 만드는 중… ${n + 1}/${on.length}`);
-      const data = await withMount([new File([o.file], name)], async (ff, dir) => {
-        const { args } = buildArgs({ clips: [{ path: `${dir}/${name}`, start: k.start, dur: k.end - k.start, hasAudio: o.ana.hasAudio }],
-          music: null, keepOrig: true, fit: opt.fit, W, H, out: 'clip.mp4' });
-        const from = logs.length;
-        if (await ff.exec(args) !== 0) throw new Error(logs.slice(from).slice(-6).join('\n'));
-        const out = await ff.readFile('clip.mp4');
-        await ff.deleteFile('clip.mp4').catch(() => {});
-        return out;
-      });
-      const fname = `하이라이트_${k.i + 1}번영상_${k.start.toFixed(1)}-${k.end.toFixed(1)}초.mp4`;
-      const blob = new Blob([data.buffer], { type: 'video/mp4' }), url = URL.createObjectURL(blob);
-      hlUrls.push(url);
-      files.push(new File([blob], fname, { type: 'video/mp4' }));
-      box.append(Object.assign(document.createElement('a'), { href: url, download: fname, className: 'btn',
-        textContent: `⬇ ${n + 1}. ${k.i + 1}번 영상 ${k.start.toFixed(1)}~${k.end.toFixed(1)}초 저장` }));
-    }
-    if (navigator.canShare?.({ files })) {
-      const b = Object.assign(document.createElement('button'), { className: 'btn cta', textContent: '📤 모두 공유 / 사진첩에 저장' });
-      b.onclick = () => navigator.share({ files }).catch(() => {});
-      box.prepend(b);
-    }
-    hlSay(`장면 클립 ${on.length}개 완성! 아래 버튼을 눌러 하나씩 저장하세요.`);
-  } catch (err) {
-    console.error(err); resetEngine();
-    hlSay('장면 클립을 만들지 못했어요. 5번 모양 칸에서 "빠르게 720p"를 고르고 다시 해 보세요.');
-  } finally { lock(false); }
-});
 function arrange(on) {
   on = [...on].sort((a, b) => a.i - b.i || a.start - b.start);
   if (backup) dropClips(clips, true); // replacing an earlier sample list
@@ -538,29 +494,23 @@ function arrange(on) {
   sel = clips[0];
   renderList();
   $('#hlUndo').hidden = false;
-  $('#hlSample').hidden = false;
 }
 $('#hlMake').addEventListener('click', async () => {
   const on = cands.filter((k) => k.on);
   if (!on.length) { alert('샘플에 쓸 장면을 하나 이상 골라 주세요.'); return; }
   if (busy) return;
   arrange(on);
-  hlSay('고른 장면으로 바꿨어요. 화면에서 바로 이어서 보여 줄게요. 마음에 들면 🎬 영상 만들기를 눌러요.');
+  hlSay('고른 장면으로 바꿨어요. 화면에서 바로 이어서 보여 줄게요. 마음에 들면 5번 모양 칸에서 🎬 영상 만들기를 눌러요.');
   stopSeq();
   scrollTo({ top: 0, behavior: 'smooth' });
   playSeq();
-});
-$('#hlSample').addEventListener('click', async () => {
-  if (busy || !clips.length) return;
-  stopSeq();
-  await make(true);
 });
 $('#hlUndo').addEventListener('click', () => {
   if (!backup || busy) return;
   dropClips(clips, true);
   clips = backup; backup = null; sel = clips[0];
   renderList();
-  $('#hlUndo').hidden = $('#hlSample').hidden = true;
+  $('#hlUndo').hidden = true;
   hlSay('찾기 전 영상으로 돌아왔어요.');
 });
 

@@ -36,15 +36,6 @@
     <p class="viewname" id="viewName">미리보기</p>
     <p class="total" id="total"></p>
     <button class="btn" id="backEdit" hidden>✏️ 다시 고치기</button>
-    <button class="btn cta" id="make">🎬 영상 만들기</button>
-    <div id="prog" hidden>
-      <div class="bar"><i id="barFill"></i></div>
-      <p id="progMsg" class="hint"></p>
-    </div>
-    <div class="saverow" id="saveRow" hidden>
-      <a class="btn cta" id="save" download>💾 저장하기</a>
-      <button class="btn" id="share" hidden>📤 공유 / 사진첩</button>
-    </div>
     <div class="strip" id="strip" hidden></div>
     <p class="hint small" id="stripHint" hidden>그림을 끌면 순서가 바뀌어요 · 동그라미는 넘어가는 효과</p>
   </aside>
@@ -80,22 +71,25 @@
 
     <div class="pane" data-pane="cut" hidden>
       <h2>필요한 부분만 남겨요</h2>
-      <p class="hint" id="cutHint">먼저 1번에서 영상을 넣어요.</p>
-      <div class="chips" id="clipPick"></div>
-      <div id="list"></div>
-      <details class="more">
-        <summary>✨ 좋은 장면 직접 고르기</summary>
-        <p class="hint">움직임이 많고 소리가 큰 장면을 찾아 줘요. 장면을 눌러 보고, 쓸 것만 골라요.</p>
-        <button class="btn" id="hlBtn">✨ 좋은 장면 찾기</button>
+      <p class="hint" id="cutHint" hidden>먼저 1번에서 영상을 넣어요.</p>
+      <div class="magic">
+        <h3>✨ 하이라이트 고르기</h3>
+        <p class="hint">움직임이 많고 소리가 큰 장면을 찾아 줘요. 장면을 눌러 미리 보고, 쓸 장면만 골라요.</p>
+        <div class="seg" data-k="hlLen">
+          <button data-v="15" class="on">15초</button>
+          <button data-v="30">30초</button>
+          <button data-v="60">60초</button>
+        </div>
+        <button class="btn cta" id="hlBtn">✨ 하이라이트 찾기</button>
         <p class="msg hlmsg" hidden></p>
         <div id="cands" class="cands" hidden></div>
         <p id="candInfo" class="total" hidden></p>
         <button class="btn cta" id="hlMake" hidden>▶ 고른 장면으로 바꾸기</button>
-        <button class="btn" id="hlSample" hidden>💾 빠른 샘플 만들기 (720p)</button>
-        <button class="btn" id="hlSave" hidden>⬇ 장면마다 따로 저장</button>
-        <div id="hlFiles" class="hlfiles" hidden></div>
         <button class="link" id="hlUndo" hidden>↩ 처음 영상으로 되돌리기</button>
-      </details>
+      </div>
+      <h3 class="sub">✂️ 직접 자르기</h3>
+      <div class="chips" id="clipPick"></div>
+      <div id="list"></div>
       <div class="navrow"><button class="btn prev" data-go="add">◀ 이전: 넣기</button><button class="btn next" data-go="text">다음: 글자 ▶</button></div>
     </div>
 
@@ -159,7 +153,18 @@
         <button data-v="1080" class="on">선명하게<br><small>1080p</small></button>
         <button data-v="720">빠르게<br><small>720p</small></button>
       </div>
-      <p class="hint">다 됐으면 <b>🎬 영상 만들기</b>를 눌러요!</p>
+      <div class="finish">
+        <h3>🎬 다 됐으면 만들어요</h3>
+        <button class="btn cta big" id="make">🎬 영상 만들기</button>
+        <div id="prog" hidden>
+          <div class="bar"><i id="barFill"></i></div>
+          <p id="progMsg" class="hint"></p>
+        </div>
+        <div class="saverow" id="saveRow" hidden>
+          <a class="btn cta" id="save" download>💾 저장하기</a>
+          <button class="btn" id="share" hidden>📤 공유 / 사진첩</button>
+        </div>
+      </div>
       <div class="navrow"><button class="btn prev" data-go="music">◀ 이전: 음악</button></div>
     </div>
   </section>

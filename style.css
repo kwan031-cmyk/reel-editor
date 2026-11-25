@@ -164,6 +164,11 @@ body.wide .cand video { aspect-ratio: 16/9; }
 .bar i { display: block; height: 100%; width: 0; background: var(--grad); transition: width .3s; }
 #progMsg { margin: 6px 0 0; text-align: center; font-size: 14px; }
 
+/* ---- last step: make and save ---- */
+.finish { margin-top: 20px; background: linear-gradient(135deg, rgba(139,92,246,.14), rgba(236,72,153,.14)); border: 1px solid var(--edge); border-radius: 22px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.finish h3 { margin: 0; }
+h3.sub { margin: 22px 0 8px; }
+
 /* ---- prev / next ---- */
 .navrow { display: flex; gap: 8px; margin-top: 20px; }
 .navrow .btn { flex: 1; margin-top: 0; }
