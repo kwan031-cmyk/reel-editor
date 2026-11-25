@@ -3,7 +3,7 @@ import { dropClips, newClip, renderList, sec } from './clips.js';
 import { analyze, cancelled, engine, ext, fitPicture, lock, logs, resetEngine, withMount } from './engine.js';
 import { bar, make, say } from './export.js';
 import { playSeq, stopSeq } from './preview.js';
-import { $, dims, opt, st } from './state.js';
+import { $, dims, opt, st, wake } from './state.js';
 import { goTab, toPanel } from './views.js';
 import { STEP, candidates, pickHighlights, scores, segLenFor } from '../analyze.js';
 import { buildArgs } from '../build.js';
@@ -87,9 +87,10 @@ async function drawThumbs(list) {
   const wait = (ev) => new Promise((r) => { v.addEventListener(ev, r, { once: true }); v.addEventListener('error', r, { once: true }); setTimeout(r, 4000); });
   for (const k of list) {
     if (tok !== thumbTok) break;
-    if (v.src !== k.url) { v.src = k.url; await wait('loadeddata'); }
+    if (v.src !== k.url) { v.src = k.url; await wake(v); }
+    const sought = wait('seeked');
     v.currentTime = Math.min(k.start + 0.3, (k.start + k.end) / 2);
-    await wait('seeked');
+    await sought;
     const cv = k.el.querySelector('canvas');
     if (v.videoWidth) { cv.width = v.videoWidth / 4; cv.height = v.videoHeight / 4; cv.getContext('2d').drawImage(v, 0, 0, cv.width, cv.height); }
   }

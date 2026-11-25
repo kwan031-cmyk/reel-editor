@@ -21,6 +21,18 @@ export const TRANS = {
   fadegrays: { icon: '◑', name: '흑백으로 넘기기' },
   squeezeh: { icon: '⊟', name: '납작하게 접기' },
 };
+// Some browsers (iPhone/iPad Safari, data-saver Android) load nothing and paint black until a video has played once.
+// A short muted play-then-pause makes it load; callers seek after this. Already-loaded videos return at once.
+export async function wake(v) {
+  if (v.readyState >= 2) return;
+  const muted = v.muted;
+  v.muted = true;
+  const p = v.play();
+  p?.catch(() => {});
+  await Promise.race([p, new Promise((r) => setTimeout(r, 1500))]).catch(() => {});
+  v.pause();
+  v.muted = muted;
+}
 // state more than one step changes (one object so every file sees the same values)
 // clips: { file, url, dur, start, end, text, trans, fix, ana, el } · sel: clip being cut · backup: clips before highlights
 export const st = { backup: null, busy: false, clips: [], nowT: 0, onLog: null, outUrl: null, sel: null, seq: 0 };

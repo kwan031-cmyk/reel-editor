@@ -1,6 +1,6 @@
 import { t } from './i18n.js';
 import { stopSeq, syncCtl } from './preview.js';
-import { $, st } from './state.js';
+import { $, st, wake } from './state.js';
 import { selectText } from './text.js';
 
 /* ---------- one viewer: whole preview, the clip being cut, or the finished video ---------- */
@@ -14,7 +14,7 @@ export function setView(v) {
   else {
     if (st.sel.frame.parentNode !== $('#clipSlot')) $('#clipSlot').replaceChildren(st.sel.frame);
     const cv = st.sel.frame.querySelector('video'), c = st.sel; // open on the chosen part, not the start of the file
-    const toStart = () => { if (cv.currentTime < c.start - 0.05 || cv.currentTime > c.end) cv.currentTime = c.start; };
+    const toStart = () => wake(cv).then(() => { if (cv.currentTime < c.start - 0.05 || cv.currentTime > c.end) cv.currentTime = c.start; });
     cv.readyState >= 1 ? toStart() : cv.addEventListener('loadedmetadata', toStart, { once: true });
   }
   $('#seqStage').hidden = v !== 'seq';

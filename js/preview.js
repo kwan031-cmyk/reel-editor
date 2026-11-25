@@ -1,4 +1,4 @@
-import { $, opt, st } from './state.js';
+import { $, opt, st, wake } from './state.js';
 import { clamp, curT, paintLayers } from './text.js';
 import { setView, view } from './views.js';
 
@@ -13,11 +13,11 @@ function prep(v, c, t = c.start) {
   v.style.cssText = 'opacity:0';
   v.muted = opt.keepOrig !== '1';
   if (v.dataset.src !== c.url) { v.src = c.url; v.dataset.src = c.url; }
-  const seek = new Promise((res) => {
+  const seek = wake(v).then(() => new Promise((res) => {
     const go = () => { v.addEventListener('seeked', res, { once: true }); v.currentTime = t; };
     v.readyState >= 1 ? go() : v.addEventListener('loadedmetadata', go, { once: true });
     v.addEventListener('error', res, { once: true });
-  });
+  }));
   return Promise.race([seek, new Promise((r) => setTimeout(r, 3000))]);
 }
 function act(t, a, b, veil, ms) {

@@ -1,7 +1,7 @@
 import { t } from './i18n.js';
 import { analyze, cancelled, ext, lock, probe, resetEngine, withMount } from './engine.js';
 import { seqRun, showAt, timeline } from './preview.js';
-import { $, MIN, TRANS, opt, st } from './state.js';
+import { $, MIN, TRANS, opt, st, wake } from './state.js';
 import { paintLayer, texts } from './text.js';
 import { goTab, refreshView, view } from './views.js';
 import { STEP } from '../analyze.js';
@@ -119,7 +119,7 @@ export function setRange(c, s, e, which) {
   q('.len').textContent = `${sec(c.end - c.start)} 사용`;
   c.tile.querySelector('.d').textContent = sec(c.end - c.start);
   const tv = c.tile.querySelector('video'); // tile shows the first frame of the chosen range
-  if (tv.readyState >= 1) tv.currentTime = c.start + 0.05; else tv.onloadedmetadata = () => (tv.currentTime = c.start + 0.05);
+  wake(tv).then(() => { if (tv.readyState >= 1) tv.currentTime = c.start + 0.05; else tv.onloadedmetadata = () => (tv.currentTime = c.start + 0.05); });
   if (c.ana) drawSound(c);
   renderTotal();
 }
