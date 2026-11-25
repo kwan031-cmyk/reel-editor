@@ -181,6 +181,9 @@ function makeCard(c) {
   });
   // preview loops inside the chosen range
 
+  // the clip on screen plays only its chosen part: start there, stop at the end and go back to the start
+  v.addEventListener('play', () => { if (v.currentTime < c.start - 0.05 || v.currentTime >= c.end - 0.05) v.currentTime = c.start; });
+  v.addEventListener('timeupdate', () => { if (!v.paused && v.currentTime >= c.end) { v.pause(); v.currentTime = c.start; } });
   q('.s').addEventListener('input', (e) => { setRange(c, +e.target.value, c.end, 's'); v.currentTime = c.start; });
   q('.e').addEventListener('input', (e) => { setRange(c, c.start, +e.target.value, 'e'); v.currentTime = c.end; });
   // typed seconds: applied on Enter or when leaving the box
@@ -1001,7 +1004,12 @@ function setView(v) {
   if (v !== 'seq') stopSeq();
   if (v !== 'result') $('#outVideo').pause();
   if (v !== 'clip') $('#clipSlot').querySelectorAll('video').forEach((x) => x.pause());
-  else if (sel.frame.parentNode !== $('#clipSlot')) $('#clipSlot').replaceChildren(sel.frame);
+  else {
+    if (sel.frame.parentNode !== $('#clipSlot')) $('#clipSlot').replaceChildren(sel.frame);
+    const cv = sel.frame.querySelector('video'), c = sel; // open on the chosen part, not the start of the file
+    const toStart = () => { if (cv.currentTime < c.start - 0.05 || cv.currentTime > c.end) cv.currentTime = c.start; };
+    cv.readyState >= 1 ? toStart() : cv.addEventListener('loadedmetadata', toStart, { once: true });
+  }
   $('#seqStage').hidden = v !== 'seq';
   $('#clipSlot').hidden = v !== 'clip';
   $('#result').hidden = v !== 'result';
