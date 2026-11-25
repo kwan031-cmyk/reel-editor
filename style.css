@@ -210,6 +210,24 @@ dialog h3 { margin: 0 0 4px; }
 .demo[data-t="slideleft"] .a { animation: dSlideA 2.4s infinite; }
 .demo[data-t="hblur"] .a { animation: dBlurA 2.4s infinite; }
 .demo[data-t="hblur"] .b { animation: dBlurB 2.4s infinite; }
+.demo[data-t="circleopen"] .b { opacity: 1; animation: dCircleOpen 2.4s infinite; }
+.demo[data-t="circleclose"] .b { opacity: 1; }
+.demo[data-t="circleclose"] .a { z-index: 1; animation: dCircleClose 2.4s infinite; }
+.demo[data-t="wipeleft"] .b { opacity: 1; animation: dWipe 2.4s infinite; }
+.demo[data-t="slideup"] .b { opacity: 1; animation: dUpB 2.4s infinite; }
+.demo[data-t="slideup"] .a { animation: dUpA 2.4s infinite; }
+.demo[data-t="fadegrays"] .a { animation: dGrayA 2.4s infinite; }
+.demo[data-t="fadegrays"] .b { animation: dGrayB 2.4s infinite; }
+.demo[data-t="squeezeh"] .b { opacity: 1; }
+.demo[data-t="squeezeh"] .a { z-index: 1; animation: dSqueeze 2.4s infinite; }
+@keyframes dCircleOpen { 0%, 40% { clip-path: circle(0% at 50% 50%); } 60%, 100% { clip-path: circle(75% at 50% 50%); } }
+@keyframes dCircleClose { 0%, 40% { clip-path: circle(75% at 50% 50%); } 60%, 100% { clip-path: circle(0% at 50% 50%); } }
+@keyframes dWipe { 0%, 40% { clip-path: inset(0 0 0 100%); } 60%, 100% { clip-path: inset(0 0 0 0); } }
+@keyframes dUpA { 0%, 40% { transform: translateY(0); } 60%, 100% { transform: translateY(-100%); } }
+@keyframes dUpB { 0%, 40% { transform: translateY(100%); } 60%, 100% { transform: translateY(0); } }
+@keyframes dGrayA { 0%, 35% { filter: grayscale(0); } 50%, 100% { filter: grayscale(1); } }
+@keyframes dGrayB { 0%, 45% { opacity: 0; filter: grayscale(1); } 52% { opacity: 1; filter: grayscale(1); } 65%, 100% { opacity: 1; filter: grayscale(0); } }
+@keyframes dSqueeze { 0%, 40% { transform: scaleY(1); } 60%, 100% { transform: scaleY(0); } }
 @keyframes dCut { 0%, 49.9% { opacity: 0; } 50%, 100% { opacity: 1; } }
 @keyframes dFade { 0%, 40% { opacity: 0; } 60%, 100% { opacity: 1; } }
 @keyframes dVeil { 0%, 40% { opacity: 0; } 50% { opacity: 1; } 60%, 100% { opacity: 0; } }

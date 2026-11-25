@@ -160,7 +160,13 @@ const T = [
   ['빨려 들어가기 (줌)', 'Zoom in', '吸い込まれる (ズーム)', '吸入 (缩放)', 'Zoom hacia dentro'],
   ['옆으로 휙 밀기', 'Swipe sideways', '横にサッと押す', '横向滑走', 'Deslizar a un lado'],
   ['흐려지며 넘기기', 'Blur through', 'ぼかして切り替え', '模糊切换', 'Desenfoque'],
-  ...['✂', '◐', '●', '✦', '◎', '⇠', '≋'].map((i) => Array(5).fill(`${i} {}`)), // icon + transition name in one text
+  ['원으로 열기', 'Circle open', '円で開く', '圆形展开', 'Círculo que abre'],
+  ['원으로 닫기', 'Circle close', '円で閉じる', '圆形收拢', 'Círculo que cierra'],
+  ['닦아 내기', 'Wipe', 'ワイプ', '擦除', 'Barrido'],
+  ['위로 밀기', 'Push up', '上へ押す', '向上推', 'Empujar arriba'],
+  ['흑백으로 넘기기', 'Through black & white', '白黒で切り替え', '经黑白切换', 'Pasar por blanco y negro'],
+  ['납작하게 접기', 'Squash flat', 'ぺしゃんこに畳む', '压扁收起', 'Aplastar'],
+  ...['✂', '◐', '●', '✦', '◎', '⇠', '≋', '⊙', '⊚', '◧', '⇡', '◑', '⊟'].map((i) => Array(5).fill(`${i} {}`)), // icon + transition name in one text
   ['트랜지션: {} (눌러서 바꾸기)', 'Transition: {} (tap to change)', 'トランジション: {} (押して変更)', '转场: {} (点击更改)', 'Transición: {} (toca para cambiar)'],
   ['{n}번 → {n}번 영상 트랜지션', 'Transition: clip {n} → clip {n}', '{n}番 → {n}番 動画のトランジション', '视频{n} → 视频{n} 的转场', 'Transición: clip {n} → clip {n}'],
   // clips and numbers

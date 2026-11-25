@@ -14,6 +14,12 @@ export const TRANS = {
   zoomin: { icon: '◎', name: '빨려 들어가기 (줌)' },
   slideleft: { icon: '⇠', name: '옆으로 휙 밀기' },
   hblur: { icon: '≋', name: '흐려지며 넘기기' },
+  circleopen: { icon: '⊙', name: '원으로 열기' },
+  circleclose: { icon: '⊚', name: '원으로 닫기' },
+  wipeleft: { icon: '◧', name: '닦아 내기' },
+  slideup: { icon: '⇡', name: '위로 밀기' },
+  fadegrays: { icon: '◑', name: '흑백으로 넘기기' },
+  squeezeh: { icon: '⊟', name: '납작하게 접기' },
 };
 // state more than one step changes (one object so every file sees the same values)
 // clips: { file, url, dur, start, end, text, trans, fix, ana, el } · sel: clip being cut · backup: clips before highlights

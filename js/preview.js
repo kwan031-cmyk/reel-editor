@@ -35,6 +35,14 @@ function act(t, a, b, veil, ms) {
     b.animate([{ transform: 'translateX(100%)' }, { transform: 'translateX(0)' }], o)];
   if (t === 'hblur') anims = [a.animate([{ filter: 'blur(0)' }, { filter: 'blur(14px)' }], o),
     b.animate([{ opacity: 0, filter: 'blur(14px)' }, { opacity: 1, filter: 'blur(0)' }], o)];
+  if (t === 'circleopen') anims = [b.animate([{ clipPath: 'circle(0% at 50% 50%)' }, { clipPath: 'circle(75% at 50% 50%)' }], o)];
+  if (t === 'circleclose') { a.style.zIndex = 3; anims = [a.animate([{ clipPath: 'circle(75% at 50% 50%)' }, { clipPath: 'circle(0% at 50% 50%)' }], o)]; }
+  if (t === 'wipeleft') anims = [b.animate([{ clipPath: 'inset(0 0 0 100%)' }, { clipPath: 'inset(0 0 0 0)' }], o)];
+  if (t === 'slideup') anims = [a.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(-100%)' }], o),
+    b.animate([{ transform: 'translateY(100%)' }, { transform: 'translateY(0)' }], o)];
+  if (t === 'fadegrays') anims = [a.animate([{ filter: 'grayscale(0)' }, { filter: 'grayscale(1)' }], { ...o, duration: ms / 2 }),
+    b.animate([{ opacity: 0, filter: 'grayscale(1)' }, { opacity: 0, filter: 'grayscale(1)', offset: 0.4 }, { opacity: 1, filter: 'grayscale(1)', offset: 0.6 }, { opacity: 1, filter: 'grayscale(0)' }], o)];
+  if (t === 'squeezeh') { a.style.zIndex = 3; anims = [a.animate([{ transform: 'scaleY(1)' }, { transform: 'scaleY(0)' }], o)]; }
   // timer fallback: animations may not report "finished" while the page is hidden
   return Promise.race([Promise.all(anims.map((x) => x.finished.catch(() => {}))), new Promise((r) => setTimeout(r, ms + 150))])
     .then(() => { anims.forEach((x) => x.cancel()); a.style.opacity = 0; a.style.zIndex = 1; });

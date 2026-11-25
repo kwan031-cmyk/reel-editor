@@ -109,6 +109,9 @@ const cases = [
   { name: 'no audio', keepOrig: false, music: null, fit: 'cover', trans: ['cut', 'cut'] },
   { name: 'transitions mixed', keepOrig: true, music: { path: 'm.m4a' }, fit: 'cover', trans: ['zoomin', 'cut'] },
   { name: 'transitions all', keepOrig: true, music: null, fit: 'cover', trans: ['fadewhite', 'slideleft'] },
+  { name: 'transitions new', keepOrig: true, music: null, fit: 'cover', trans: ['circleopen', 'squeezeh'] },
+  { name: 'transitions new 2', keepOrig: true, music: null, fit: 'cover', trans: ['wipeleft', 'fadegrays'] },
+  { name: 'transitions new 3', keepOrig: true, music: null, fit: 'cover', trans: ['slideup', 'circleclose'] },
   { name: 'transitions long', keepOrig: true, music: null, fit: 'cover', trans: ['fade', 'zoomin'], trSec: 0.7 },
 ];
 for (const c of cases) {
