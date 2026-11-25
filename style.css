@@ -292,7 +292,11 @@ dialog h3 { margin: 0 0 4px; }
   .cbtn { width: 34px; height: 34px; }
   .cbtn.play { width: 42px; height: 42px; }
   .viewname, .hint.small { display: none; }
-  .tile { width: 44px; }
+  .tile { width: 38px; }
+  /* with clips the order strip (and its transition circles) must fit under the video without scrolling */
+  .viewer:has(#strip:not([hidden])) .screen { height: calc(100vh - 196px); }
+  .strip { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; padding: 2px 2px 4px; flex: none; }
+  body.wide .viewer:has(#strip:not([hidden])) .screen { height: auto; width: min(100%, calc((100vh - 196px) * 16 / 9)); margin: 0 auto; }
   .panel { margin: 0; scroll-margin-top: 8px; }
   .tabs { position: sticky; top: 8px; left: auto; right: auto; bottom: auto; z-index: 10; margin: 8px; border-radius: 18px; }
   .tabs button { flex-direction: row; justify-content: center; gap: 6px; padding: 6px 4px; font-size: 13px; }
