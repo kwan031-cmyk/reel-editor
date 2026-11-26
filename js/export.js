@@ -12,16 +12,18 @@ import { buildArgs } from '../build.js';
 export const say = (m) => { $('#progMsg').textContent = m; };
 export const bar = (p) => { $('#barFill').style.width = `${Math.round(p * 100)}%`; };
 
-$('#make').addEventListener('click', () => make(false));
-export async function make(sample) {
+$('#make').addEventListener('click', make);
+export async function make() {
   const list = st.clips.filter((c) => c.dur > 0);
   if (!list.length) { alert(t('먼저 1번에서 영상을 골라 주세요.')); return; }
   lock(true);
   $('#prog').hidden = false; $('#saveRow').hidden = true; bar(0);
   $('#prog').scrollIntoView({ behavior: 'smooth', block: 'center' });
-  const [W, H] = dims(sample ? '720' : opt.q);
+  const [W, H] = dims(opt.q);
   const keepOrig = opt.keepOrig === '1';
   const t0 = Date.now();
+  // keep the screen on while making: a phone that dims and locks stops the page (no-op where unsupported)
+  const awake = navigator.wakeLock?.request('screen').catch(() => null);
   try {
     const ff = await engine(say);
     say('준비 중…');
@@ -60,7 +62,7 @@ export async function make(sample) {
         if (t == null) return;
         const p = Math.min(1, t / total), el = (Date.now() - t0) / 1000;
         bar(p);
-        say(`${sample ? '샘플 ' : ''}만드는 중… ${Math.round(p * 100)}%${p > 0.05 ? ` (약 ${Math.ceil((el / p - el) / 60)}분 남음)` : ''}`);
+        say(`만드는 중… ${Math.round(p * 100)}%${p > 0.05 ? ` (약 ${Math.ceil((el / p - el) / 60)}분 남음)` : ''}`);
       };
       say('만드는 중… 0%');
       const from = logs.length;
@@ -71,7 +73,7 @@ export async function make(sample) {
       await ff.deleteFile('out.mp4').catch(() => {});
       return out;
     });
-    showResult(new Blob([data.buffer], { type: 'video/mp4' }), (Date.now() - t0) / 1000, sample);
+    showResult(new Blob([data.buffer], { type: 'video/mp4' }), (Date.now() - t0) / 1000);
   } catch (err) {
     console.error(err);
     resetEngine(); // a crashed (out of memory) engine can't be reused
@@ -79,16 +81,17 @@ export async function make(sample) {
     bar(0);
   } finally {
     st.onLog = null;
+    awake?.then((w) => w?.release());
     lock(false);
   }
 }
 
-function showResult(blob, secs, sample) {
-  if (!sample) counter('videos', true).then((v) => showCount('#cMade', v)); // samples don't count
+function showResult(blob, secs) {
+  counter('videos', true).then((v) => showCount('#cMade', v));
   if (st.outUrl) URL.revokeObjectURL(st.outUrl);
   st.outUrl = URL.createObjectURL(blob);
   const d = new Date(), p = (n) => String(n).padStart(2, '0');
-  const name = `릴스${sample ? '_샘플' : ''}_${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}.mp4`;
+  const name = `릴스_${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}.mp4`;
   $('#outVideo').src = st.outUrl;
   $('#save').href = st.outUrl;
   $('#save').download = name;
@@ -97,7 +100,7 @@ function showResult(blob, secs, sample) {
   share.hidden = !navigator.canShare?.({ files: [file] });
   share.onclick = () => navigator.share({ files: [file] }).catch(() => {});
   bar(1);
-  say(`${sample ? '샘플(720p) ' : ''}완성! (${(blob.size / 1048576).toFixed(1)} MB, ${Math.round(secs)}초 걸림)`);
+  say(`완성! (${(blob.size / 1048576).toFixed(1)} MB, ${Math.round(secs)}초 걸림)`);
   $('#saveRow').hidden = false;
   setView('result');
   $('#saveRow').scrollIntoView({ behavior: 'smooth', block: 'center' }); // the viewer box itself has no layout on phones

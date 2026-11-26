@@ -48,7 +48,7 @@ $('#autoBtn').addEventListener('click', async () => {
   arrange(cands.filter((k) => k.on));
   hlSay(`추천 장면 ${st.clips.length}개를 이어 붙여 영상을 만들고 있어요. 다 되면 화면에 바로 나와요.`);
   goTab('more'); // making and saving live in the last step
-  await make(false);
+  await make();
   hlSay(cancelled ? '영상 만들기를 그만했어요. 다시 하려면 버튼을 눌러요.' : $('#saveRow').hidden ? '영상을 만들지 못했어요. 🎬 영상 만들기 아래 안내를 봐 주세요.'
     : `완성! 추천 장면 ${st.clips.length}개로 만든 영상이 화면에 나왔어요. 5번 모양 칸에서 💾 저장하기를 눌러요. 고치고 싶으면 2~5번 칸에서 바꾸고 다시 만들면 돼요.`);
 });

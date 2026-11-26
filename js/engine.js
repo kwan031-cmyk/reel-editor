@@ -26,7 +26,7 @@ export function engine(say = () => {}) {
     }
     const wasmURL = URL.createObjectURL(new Blob(chunks, { type: 'application/wasm' }));
     say('편집 엔진 켜는 중…');
-    await ff.load({ coreURL: base + 'ffmpeg-core.js', wasmURL });
+    try { await ff.load({ coreURL: base + 'ffmpeg-core.js', wasmURL }); } finally { URL.revokeObjectURL(wasmURL); } // loaded (or failed): the 31 MB copy is no longer needed
     if (enginePromise !== p) { ff.terminate(); throw new Error('cancelled'); } // 취소 pressed while it was loading
     return ff;
   })().catch((e) => { if (enginePromise === p) enginePromise = null; throw e; }); }

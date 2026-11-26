@@ -105,7 +105,7 @@ export function buildArgs({ clips, overlays = [], music, keepOrig, fit, W, H, ou
     const T = total.toFixed(3), st = Math.max(0, total - 1.5).toFixed(3);
     f.push(`[${mi}:a]${AF},apad,atrim=duration=${T},afade=t=out:st=${st}:d=1.5,volume=${music.vol ?? (keepOrig ? 0.6 : 1)}[m]`);
     if (ac) {
-      f.push(`${ac}[m]amix=inputs=2:duration=first:dropout_transition=0,volume=2[mix]`);
+      f.push(`${ac}[m]amix=inputs=2:duration=first:dropout_transition=0,volume=2,alimiter=limit=0.95:level=0[mix]`); // amix halves each input; the limiter stops loud parts of both from clipping
       aout = '[mix]';
     } else aout = '[m]';
   }
