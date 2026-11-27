@@ -23,7 +23,7 @@ const server = http.createServer((req, res) => {
 server.on('error', (e) => { if (e.code !== 'EADDRINUSE' || PORT > 8090) throw e; server.listen(++PORT, '0.0.0.0'); });
 server.listen(PORT, '0.0.0.0', () => {
   const ips = Object.values(os.networkInterfaces()).flat().filter((i) => i && i.family === 'IPv4' && !i.internal).map((i) => i.address);
-  console.log('\n  숏폼 뚝딝이 켜졌어요. 이 창을 닫으면 꺼져요.\n');
+  console.log('\n  숏폼 뚝띩이 켜졌어요. 이 창을 닫으면 꺼져요.\n');
   console.log(`  PC에서:  http://localhost:${PORT}`);
   for (const ip of ips) console.log(`  폰에서 (같은 와이파이):  http://${ip}:${PORT}`);
   console.log('');
